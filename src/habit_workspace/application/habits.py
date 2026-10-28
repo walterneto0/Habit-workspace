@@ -125,6 +125,8 @@ class HabitService:
         *,
         scope: TemporalScope | None = None,
         recurrence: Recurrence | None = None,
+        name: str | None = None,
+        tags: tuple[str, ...] | None = None,
         acknowledge_history: bool = False,
     ) -> LoadedHabit:
         """Retain the caller's revision; never reload away a stale-edit conflict.
@@ -139,6 +141,8 @@ class HabitService:
             current,
             scope=scope if scope is not None else current.scope,
             recurrence=recurrence if recurrence is not None else current.recurrence,
+            name=name if name is not None else current.name,
+            tags=tags if tags is not None else current.tags,
         )
         affected = tuple(
             record

@@ -39,6 +39,10 @@ ainda pendentes. A fase não está concluída.
 Check-ins vinculados a hábito por UUID e observações vinculadas a Fields por UUID, arquivo diário canônico; tags, busca e escopo/recorrência.
 Aceite: checklist vinculada a hábito gera check-in correto, campo numérico em layout gera observação tipada, alteração visual não altera valor e observação permanece após bloco removido.
 
+Implementada e verificada por testes automatizados: [relatório da Fase 6](docs/verification/phase-6.md).
+Modo de acompanhamento, formulário de hábitos e captura tipada disponíveis; revisão
+visual/acessibilidade humana pendente; aguarda revisão do responsável.
+
 ## Fase 7 — Agenda, notas, imagens e planejamento
 Tarefas, objetivos, avaliações, eventos e notas; bloco de texto Markdown com marcador por ID, imagens em Assets; agenda referenciando dados canônicos.
 Aceite: exportar/importar itens com dependências, preservar notas/imagens e abrir em outro cofre.

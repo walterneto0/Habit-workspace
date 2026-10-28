@@ -57,13 +57,18 @@ class SaveJob(QRunnable):
             )
 
 
-def composition(layout, report, root=None, draft_fields=None):
+def composition(layout, report, root=None, draft_fields=None, capture=None):
+    """capture: optional CaptureSnapshot that adds tracking-mode values per block."""
     rows = []
     draft_fields = draft_fields or {}
     documents = {str(d.document.id): d.document for d in report.documents}
     for block, position in zip(layout.blocks, layout.positions(), strict=True):
         row = component_mapping(block)
         row.update(row=position.row, column=position.column, detail="", bindingLabel="")
+        if capture is not None:
+            from habit_workspace.presentation.tracking import cell_mapping
+
+            row["capture"] = [cell_mapping(c) for c in capture.block(block)]
         if block.binding:
             doc = documents.get(str(block.binding.source_id))
             row["bindingLabel"] = (
@@ -110,7 +115,7 @@ def composition(layout, report, root=None, draft_fields=None):
             nested = LayoutTemplate(
                 uuid4(), 1, "Seção", block.config.children, grid=Grid(block.config.columns)
             )
-            row["children"] = composition(nested, report, root, draft_fields)
+            row["children"] = composition(nested, report, root, draft_fields, capture)
         rows.append(row)
     return rows
 
