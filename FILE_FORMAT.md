@@ -1,5 +1,59 @@
 # Habit Workspace — Formato de Arquivos, esquema v4 (proposta)
 
+## Implemented Phase 1 profile
+
+The examples and future contracts below remain authoritative. Phase 1 supports
+`note`, `page`, `year_page`, `month_page`, `week_page`, and `day_page` at document
+schema version **4**, and the representative `habit` at versions **1 and 4**
+(version 1 is the example in section 3). Reading/writing does not silently upgrade
+versions. Other kinds/versions, including legacy v3 embedded layouts, are reported
+as unsupported and left untouched. No legacy migration is invented without a
+source contract; future migrations must be explicit and have round-trip tests.
+
+Every document requires a mapping `hw` with integer `schema_version`, string
+`kind`, and UUID string `id`. Notes and custom pages may have a string `title`,
+string-list `tags`, and UUID `origin_page_id`. These fields are optional. Period
+pages require a matching ISO `period` (e.g. `week/2026-W44`); daily pages may
+instead use `date: "2026-10-29"`. If both are present they must agree. Habits
+require `name`, `scope.start`, nullable `scope.end_exclusive`, and `recurrence`
+(`daily` or `weekdays` with unique integer days 1–7). Phase 1 validates storage
+only; it does not generate occurrences or compute statistics.
+
+Known `layout_history`, `checkins`, and `observations` structures are validated
+and preserved as data. References from these structures and `origin_page_id`
+are disclosed by the scanner/importer. Layout JSON and metric definitions are
+not indexed in Phase 1, so these references are explicitly **unavailable in this
+phase**, even if a JSON/metric file is present. Unknown fields/blocks remain inert
+and round-trip; references inside unknown extensions cannot be interpreted.
+
+The Phase 1 record profile uses daily `checkins` with UUID `id`, UUID `habit_id`,
+ISO-string `date`, `state` (`done`, `missed`, `skipped`), text `label_snapshot`,
+and timezone-qualified ISO-string `recorded_at`. `observations` use UUID `id`,
+UUID `field_id`, text `field_label_snapshot`, ISO-string `observed_date`,
+timezone-qualified `recorded_at`, and `value`. Record dates must match the page;
+record UUIDs and habit/date pairs must be unique within that document. These
+records are preserved/inspected only; no capture or analytics service is added.
+
+Frontmatter permits bounded YAML mappings with string keys, sequences, scalar
+values and standard timestamps (known date fields still require ISO strings).
+Custom tags, anchors, aliases, merge keys, duplicate keys, multiple YAML documents,
+non-finite numbers, nesting over 32 levels, and more than 20,000 parser events are
+rejected. Files are limited to 2 MiB, frontmatter to 256 KiB. UTF-8 is required;
+an existing BOM and Markdown line endings are retained. Comments and quoting in
+frontmatter are retained where supported by the round-trip parser. Identical
+imports are determined by exact file bytes, conservatively treating formatting
+differences with the same UUID as conflicts.
+
+`.habit-workspace/vault.json` is UTF-8 JSON with `schema_version: 1`,
+`kind: "vault"`, UUID `id`, and non-empty string `name`. Unknown configuration
+fields are preserved (opening never rewrites it). Cache paths are relative to the
+vault. `.habit-workspace/backups/` holds exact pre-save recovery copies; `.habit-workspace/write.lock/`
+serializes application writers. A leftover lock is reported for explicit recovery,
+never automatically stolen. Internal files are excluded from document discovery.
+Notes default to `Notes/`; standalone imports use `Imports/<UUID>.md`. Neither
+location determines identity. Plain Markdown requires an explicit wrap-as-note
+import option; its complete original text becomes the note body.
+
 ## 1. Contrato geral
 - Um **cofre** (`vault`) é uma pasta escolhida pelo usuário, transportável entre computadores.
 - Documentos de domínio e páginas são arquivos de texto Markdown UTF-8 (`.md`) com propriedades YAML iniciais delimitadas por `---`.

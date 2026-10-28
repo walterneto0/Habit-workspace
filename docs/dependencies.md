@@ -1,4 +1,4 @@
-# Phase 0 dependency inventory
+# Dependency inventory (Phases 0–1)
 
 Initial verified environment: Linux x86_64, Python 3.14.7, pip 25.1.1.
 `requirements.lock` records the complete resolved application/development package
@@ -15,6 +15,7 @@ before broadening the Python range or distributing binaries.
 | iniconfig 2.3.1, pluggy 1.7.0 | Test dependencies | MIT |
 | packaging 26.3 | Test dependency | Apache-2.0 OR BSD-2-Clause |
 | Pygments 2.21.0 | Test dependency | BSD-2-Clause |
+| ruamel.yaml 0.18.17, ruamel.yaml.clib 0.2.15 | Phase 1 YAML round trips; transitive C extension | MIT |
 
 Inventory obtained from installed distribution metadata. The application imports
 QtCore, QtGui and QtQml, and uses Qt Quick/Controls/Layouts. It does not instantiate
@@ -34,3 +35,12 @@ has been approved for public distribution in Phase 0.
 All dependencies were installed into `.venv`; nothing was installed globally.
 Initial installation required network access. Subsequent application startup was
 verified in an isolated network namespace without network interfaces to the host.
+
+Phase 1 adds only ruamel.yaml (plus its declared C-extension dependency).
+The reader explicitly uses the pure-Python round-trip parser, preceded by an
+event pass rejecting aliases, anchors, custom tags and excessive complexity.
+This preserves comments and quoting while treating every document as inert data.
+Strict domain validation runs after parsing and before writing. No unsafe YAML
+constructor, executable template engine, network resource loader, or downloaded
+code is invoked by the application. Version constraints and the exact snapshot
+are recorded in `pyproject.toml` and `requirements.lock`.

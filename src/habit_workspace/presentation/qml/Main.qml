@@ -4,6 +4,7 @@ import QtQuick.Layouts
 
 ApplicationWindow {
     id: window
+    property string vaultStatus: qsTr("Persistência local pronta. Use os comandos de diagnóstico para criar, abrir e importar documentos nesta fase.")
     width: 1100
     height: 740
     minimumWidth: 640
@@ -47,7 +48,8 @@ ApplicationWindow {
                 id: status
                 anchors.fill: parent
                 anchors.margins: 16
-                text: qsTr("Base técnica pronta. Os recursos de cofre serão adicionados na próxima fase.")
+                text: window.vaultStatus
+                textFormat: Text.PlainText
                 color: "#A7ADB8"
                 wrapMode: Text.WordWrap
             }
