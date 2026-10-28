@@ -1,4 +1,4 @@
-"""The deliberately small Phase 1 document storage profile."""
+"""Versioned document storage validation; inert extensions remain intact."""
 
 import math
 import re
@@ -7,6 +7,8 @@ from datetime import date, datetime
 from enum import StrEnum
 from typing import Any
 from uuid import UUID
+
+from habit_workspace.domain.temporal import PeriodRef
 
 
 class DocumentError(ValueError):
@@ -178,6 +180,8 @@ class Document:
                     "Weekdays must be integers 1–7",
                 )
                 require(len(days) == len(set(days)), "Weekdays must be unique")
+            if hw.get("archived_at") is not None:
+                timestamp(hw["archived_at"], "archived_at")
         previous = None
         for entry in sequence(hw.get("layout_history", []), "layout_history"):
             entry = mapping(entry, "layout assignment")
@@ -200,21 +204,10 @@ class Document:
         if period is not None:
             require(isinstance(period, str), "period must be an ISO period string")
             try:
-                prefix, value = period.split("/", 1)
-                require(scale is None or prefix == scale, "Period does not match document kind")
-                if prefix == "day":
-                    civil_date(value, "period")
-                elif prefix == "month":
-                    require(bool(re.fullmatch(r"\d{4}-\d{2}", value)), "Invalid month")
-                    civil_date(value + "-01", "period")
-                elif prefix == "year":
-                    require(bool(re.fullmatch(r"\d{4}", value)), "Invalid year")
-                    civil_date(value + "-01-01", "period")
-                elif prefix == "week":
-                    require(bool(re.fullmatch(r"\d{4}-W\d{2}", value)), "Invalid ISO week")
-                    date.fromisocalendar(int(value[:4]), int(value[-2:]), 1)
-                else:
-                    raise DocumentError("Unsupported period scale")
+                parsed = PeriodRef.parse(period)
+                require(
+                    scale is None or parsed.scale == scale, "Period does not match document kind"
+                )
             except ValueError as error:
                 raise DocumentError(f"Invalid period: {period}") from error
         if "date" in hw:

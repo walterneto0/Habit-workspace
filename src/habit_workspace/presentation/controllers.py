@@ -14,6 +14,7 @@ from habit_workspace.domain.documents import Document, DocumentError
 from habit_workspace.presentation.navigation import Navigation, long_date
 from habit_workspace.vault.atomic_io import read_bytes
 from habit_workspace.vault.format import decode
+from habit_workspace.vault.habits import habit_from_document
 from habit_workspace.vault.watcher import VaultWatcher
 
 KIND_LABELS = {
@@ -169,7 +170,20 @@ class WorkspaceController(QObject):
         entries = self._entries()
         visible = entries
         if nav.period:
-            visible = [r for r in visible if r["period"] == nav.period]
+            # Scope-only filtering of the existing scan: no filesystem work or
+            # occurrence expansion on the GUI thread, and no generated pages.
+            interval = nav.period_ref.scope
+            habit_ids = (
+                {
+                    str(entry.document.id)
+                    for entry in self.session.report.documents
+                    if entry.document.kind == "habit"
+                    and habit_from_document(entry.document).scope.intersects(interval)
+                }
+                if self.session
+                else set()
+            )
+            visible = [r for r in visible if r["period"] == nav.period or r["id"] in habit_ids]
         if self._query:
             query = self._query.casefold()
             visible = [

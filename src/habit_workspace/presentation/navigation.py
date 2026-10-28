@@ -1,8 +1,10 @@
-"""Virtual desktop routes only; not the Phase 3 scope/recurrence domain model."""
+"""Virtual desktop routes backed by the shared civil-period domain."""
 
 import calendar
 from dataclasses import dataclass
 from datetime import date, timedelta
+
+from habit_workspace.domain.temporal import PeriodRef
 
 MONTHS = (
     "Janeiro",
@@ -45,43 +47,21 @@ class Navigation:
 
     @property
     def period(self) -> str:
-        d = self.anchor
-        match self.scale:
-            case "year":
-                return f"year/{d.year:04}"
-            case "month":
-                return f"month/{d.year:04}-{d.month:02}"
-            case "week":
-                year, week, _ = d.isocalendar()
-                return f"week/{year:04}-W{week:02}"
-            case "day":
-                return f"day/{d.isoformat()}"
-        return ""
+        return str(self.period_ref) if self.period_ref else ""
+
+    @property
+    def period_ref(self) -> PeriodRef | None:
+        if self.scale in SCALES:
+            return PeriodRef.containing(self.scale, self.anchor)
+        return None
 
     @property
     def start(self) -> date:
-        d = self.anchor
-        match self.scale:
-            case "year":
-                return d.replace(month=1, day=1)
-            case "month":
-                return d.replace(day=1)
-            case "week":
-                return d - timedelta(days=d.weekday())
-        return d
+        return self.period_ref.start if self.period_ref else self.anchor
 
     @property
     def end(self) -> date:
-        match self.scale:
-            case "year":
-                return self.anchor.replace(month=12, day=31)
-            case "month":
-                return self.anchor.replace(
-                    day=calendar.monthrange(self.anchor.year, self.anchor.month)[1]
-                )
-            case "week":
-                return self.start + timedelta(days=6)
-        return self.anchor
+        return self.period_ref.end if self.period_ref else self.anchor
 
     @property
     def title(self) -> str:

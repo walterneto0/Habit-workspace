@@ -236,3 +236,41 @@ Para check-ins de hábitos, continuam valendo `checkins` e `habit_id` conforme c
 - Migração de v3, se houver dados de usuários, deve ser explícita e testada: `blocks` embutidos em páginas v3 são reconhecidos somente para leitura e migração, não como formato novo.
 - Uma fonte semanal ativada em 29/10 não produz falhas automáticas retroativas em 26–28/10.
 - Resumos mensais dinâmicos leem campos e check-ins pelos identificadores e datas; a atribuição do layout mensal continua única e imutável até o usuário editá-la.
+
+## Implemented Phase 3 temporal profile
+
+Phase 3 uses the same habit schemas **1 and 4** and creates new habits at **4**.
+There is no format migration or new canonical record type. `scope.start` is
+inclusive, `scope.end_exclusive` is exclusive or `null`; an inclusive user range
+October 27–December 31 is stored as `2026-10-27` to `2027-01-01`.
+`recurrence.kind` remains `daily` or `weekdays`; selected days are unique ISO
+integers 1–7. Origin is the optional `origin_page_id` UUID, independent of scope
+and schedule. A virtual period need not have a materialized page or origin UUID.
+
+The previously specified optional lifecycle field `hw.archived_at` is recognized
+on habits as a timezone-qualified ISO timestamp string, or `null`. It is exposed
+as metadata and does not silently shorten scope or erase historical schedules.
+Invalid values are reported without altering their files. No creation/activation
+timestamp is invented for older habits. Validity starts at the explicit scope
+start, including when the user deliberately overrides the creation default.
+
+New habit tags use NFC Unicode normalization, trimming and case folding;
+empty tags are omitted and normalization collisions within a habit are deduplicated
+in first-seen order. Different habits sharing tags retain different UUIDs. Existing
+tag spelling and ordering are preserved on scope/recurrence-only edits. No global
+tag rename/merge operation is introduced.
+
+`HabitService` updates only the requested semantic fields through the existing
+round-trip serializer and revision-checked atomic writer. Nested unknown scope
+and recurrence metadata, body text, comments, version and supported extensions
+survive. Switching to daily recurrence removes the obsolete known `days` field.
+Check-ins remain solely in daily documents. Queries never save generated dates or
+states. A scope/schedule edit that makes an existing eligible check-in ineligible
+requires acknowledgement in the service API; records remain intact and are
+returned separately from currently scheduled occurrences.
+
+Calendar identifiers use canonical ASCII digits and civil Gregorian/ISO dates.
+Parsing remains possible through year 9999. Calculations requiring an exclusive
+boundary beyond `9999-12-31` raise an explicit range error rather than silently
+turning a closed scope into an open one; those existing documents remain readable.
+Desktop navigation retains its existing years 2–9998 range.

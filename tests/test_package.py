@@ -12,6 +12,7 @@ def test_import_has_no_qt_or_filesystem_side_effects(tmp_path):
             "-c",
             "import sys; import habit_workspace; import habit_workspace.__main__; "
             "import habit_workspace.application.vault; import habit_workspace.application.imports; "
+            "import habit_workspace.application.habits; "
             "assert not any(name.startswith('PySide6') for name in sys.modules)",
         ],
         cwd=tmp_path,

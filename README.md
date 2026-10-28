@@ -142,3 +142,45 @@ Kit de **especificação** para desenvolver um aplicativo desktop com **Python +
 
 ## Nota de projeto
 Os JSON e YAML dos exemplos são **propostas de contrato**, não equivalem a um parser já implementado. Regras de migração devem ser verificadas antes de existir conteúdo real de usuários.
+
+## Phase 3 temporal domain
+
+Habits have one canonical Markdown file, an editable validity interval and an
+independent daily or ISO-weekday recurrence. The existing period document list
+shows matching definitions; no checklist/capture UI is introduced.
+
+```python
+from datetime import date
+from pathlib import Path
+from habit_workspace.application.vault import VaultSession
+from habit_workspace.application.habits import HabitService
+from habit_workspace.domain.temporal import PeriodRef, TemporalScope, Recurrence
+
+service = HabitService(VaultSession.open(Path("/your/existing/vault")))
+loaded = service.create(name="Read", period=PeriodRef.parse("day/2026-10-27"))
+loaded = service.update(
+    loaded,
+    scope=TemporalScope.from_inclusive(date(2026, 10, 27), date(2026, 12, 31)),
+    recurrence=Recurrence.weekdays((1, 2, 3, 4, 5)),
+)
+result = service.query(PeriodRef.parse("week/2026-W44"), today=date(2026, 10, 29))
+# Scheduled: October 27, 28, 29, 30. No completion records are created.
+```
+
+Retain `LoadedHabit` for revision-checked edits. Handle `HistoryImpactError` by
+reviewing its records before retrying with `acknowledge_history=True`; this never
+deletes records. Handle `ConflictError` by explicitly reloading/comparing files.
+Inspect query diagnostics and `session.index_error`; a cache error does not undo
+a successful canonical write. Run file operations and full queries outside GUI
+slots; navigation itself uses only the existing scan.
+
+Run the isolated, real-file acceptance demonstration:
+
+```bash
+.venv/bin/python tools/verify_phase3.py
+```
+
+It creates temporary vaults, demonstrates scope/recurrence edits, preserves a
+historical check-in, imports dependencies, moves a habit file, and rebuilds SQLite.
+The JSON output includes the actual canonical habit Markdown. Temporary fixtures
+are removed on exit. See [Phase 3 verification](docs/verification/phase-3.md).

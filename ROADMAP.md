@@ -17,6 +17,10 @@ Aceite: UI resize, estados de cofre vazio, importações e navegação sem path 
 PeriodRef, TemporalScope e recorrência; arquivos `.md` de hábitos e outros itens; origem e validade independentes; referência por UUID, testes de semana ISO e mudanças de escopo.
 Aceite: um hábito aparece nas visões pertinentes sem duplicar arquivo; renomear/mover arquivo não quebra referência.
 
+Implementada e verificada: [relatório da Fase 3](docs/verification/phase-3.md).
+Entidade de hábito e notas/páginas existentes preservadas; tarefas, objetivos e
+eventos continuam na Fase 7. A Fase 4 não foi iniciada.
+
 ## Fase 4 — Contrato de layouts e campos (testes de domínio antes de UI)
 Layouts JSON versionados, assignment único por período/instante, template de tipo como fallback, histórico de ativação, campos tipados estáveis, observações canônicas datadas; resolver e testes de colisão de vigência.
 Aceite: criar campo em semana 44 com ativação em 29/10, não afetar 26–28; duas versões históricas, só uma ativa no mesmo instante; remoção de bloco não apaga dados.

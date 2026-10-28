@@ -206,3 +206,33 @@ def test_preview_discloses_habit_reference_pointing_to_a_note(desktop, tmp_path)
     assert desktop.state["importPreview"]["missingCount"] == 1
     assert desktop.confirmImport()
     assert desktop.state["selected"]["missing"] == 1
+
+
+def test_habit_visible_across_virtual_views_without_io_or_duplication(
+    desktop, tmp_path, monkeypatch
+):
+    from habit_workspace.application.habits import HabitService
+    from habit_workspace.domain.temporal import PeriodRef, Recurrence, TemporalScope
+
+    desktop.createVault(str(tmp_path / "vault"), "Temporal")
+    service = HabitService(desktop.session)
+    loaded = service.create(
+        name="Read",
+        period=PeriodRef.parse("day/2026-10-27"),
+        scope=TemporalScope.from_inclusive(date(2026, 10, 27), date(2026, 12, 31)),
+        recurrence=Recurrence.weekdays((1, 2, 3, 4, 5)),
+    )
+    raw = loaded.loaded.path.read_bytes()
+
+    def forbidden(*args, **kwargs):
+        raise AssertionError("Navigation must not scan or generate occurrences")
+
+    monkeypatch.setattr(desktop.session, "scan", forbidden)
+    monkeypatch.setattr(Recurrence, "occurrences", forbidden)
+    for view in ("year", "month", "week", "day"):
+        desktop.navigate(view, "2026-10-29")
+        assert [row["id"] for row in desktop.state["documents"]] == [str(loaded.habit.id)]
+    desktop.navigate("month", "2027-01-01")
+    assert desktop.state["documents"] == []
+    assert loaded.loaded.path.read_bytes() == raw
+    assert len(desktop.session.report.documents) == 1

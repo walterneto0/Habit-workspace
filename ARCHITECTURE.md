@@ -103,3 +103,40 @@ usam QSettings da máquina; os formatos canônicos da Fase 1 não foram alterado
 A prévia documental é limitada a texto inerte e snapshots já armazenados. A
 varredura síncrona e os limites de concorrência da Fase 1 continuam aplicáveis;
 veja `docs/verification/phase-2.md` antes de assumir suporte a cofres grandes.
+
+## Implemented Phase 3 temporal domain
+
+- `domain/temporal.py`: immutable `PeriodRef`, `TemporalScope`, `Recurrence` and
+  scale/kind enums. ISO week identity is independent of the civil month/year;
+  periods order by start/end/identifier, without implying a parent relationship.
+  Recurrence requires a finite query interval, clips to validity first and yields
+  dates lazily, jumping over non-selected weekdays.
+- `domain/habits.py`: immutable canonical `Habit`, normalized tag projection,
+  origin UUID and optional archival metadata. No Qt, filesystem or SQLite imports.
+- `vault/habits.py`: typed mapping over existing `Document` frontmatter. Updates
+  retain Markdown, schema version and unknown metadata instead of serializing the
+  typed projection as a replacement for the complete document.
+- `application/habits.py`: `HabitService.create/load/update/query/query_report`,
+  revision-bearing `LoadedHabit`, immutable query/occurrence/check-in DTOs and
+  `HistoryImpactError`. Check-ins are inspected only. Missing and unscheduled
+  records remain distinguishable; ambiguous habit/check-in identities fail
+  explicitly. Parse issues and missing references accompany query results.
+- `presentation/navigation.py` reuses `PeriodRef`. The existing document list
+  includes scope-intersecting habits from the current scan; its styling and QML
+  are unchanged. Navigation does not scan files or expand occurrences.
+
+Canonical writes still use `VaultSession` and `DocumentRepository`; index schema
+and ownership are unchanged. A query scans once and derives its result from files,
+with at most one calendar year's dates per habit. `query_report` is a no-I/O
+projection of an existing scan. These synchronous application methods are intended
+for a worker-owned session when future QML occurrence binding is added; they are
+not connected to GUI slots. Do not share a mutable `VaultSession` across threads.
+The Phase 1/2 synchronous watcher/import/reindex limitations remain; this phase
+adds no background scan manager or claim of large-vault responsiveness.
+
+Current scope and recurrence are editable definitions, not versioned historical
+schedules. Existing records always survive edits, and out-of-schedule records are
+reported separately. Archive metadata is available to callers; historical queries
+include archived definitions rather than silently modifying their validity.
+Layout assignments, metric definitions, capture UI and analytics remain in their
+later roadmap phases.
