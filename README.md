@@ -1,188 +1,165 @@
-# Habit Workspace — Codex Specification Kit v4
+# Habit Workspace
 
-## Desenvolvimento — Fase 2
+Habit Workspace is an early-stage desktop application for organizing personal
+planning data across year, month, ISO-week, and day views. Its design goal is a
+local-first workspace where readable files, not a server account or database, are
+the durable source of truth.
 
-Interface desktop em português brasileiro, com sidebar retrátil, calendário,
-navegação virtual por ano/mês/semana ISO/dia, documentos e notas, propriedades,
-busca local, temas claro/escuro, atalhos e movimento reduzido. Crie, abra e troque
-cofres pela interface; importe documentos com prévia e reindexe os arquivos em
-Configurações. Nenhum cofre ou documento de exemplo é criado ao iniciar.
+> **Status: pre-alpha.** Phases 0–4 are implemented. The application is useful
+> for exploring the vault, navigation, and domain/file contracts, but it is not
+> a finished habit tracker. Data capture, the visual layout editor, charts, and
+> backup/export workflows are incomplete. Use test or disposable data and keep
+> independent backups.
 
-Os serviços da Fase 1 e seus contratos continuam preservados. Markdown/YAML é a
-fonte canônica, SQLite é reconstruível, e navegar por períodos não grava páginas.
-Os contratos de layout versionado, campos tipados e observações canônicas da Fase 4
-estão implementados. Layout Studio visual, captura de hábitos e análises gráficas
-continuam em suas fases futuras.
+The initial application interface language is Brazilian Portuguese. Repository
+documentation is in English.
 
-Ambiente inicial: Linux e Python 3.14. Instalação local reproduzível:
+## What exists today
+
+- Desktop shell built with Python, PySide6, Qt Quick, and QML, with temporal
+  navigation, document browsing, local search, settings, and light/dark themes.
+- A local vault format based on Markdown with validated YAML frontmatter.
+  Documents have stable UUIDs and remain readable in ordinary editors.
+- Atomic document writes, conflict detection, import preview, file watching,
+  diagnostics for missing references, and a rebuildable SQLite index.
+- Pure-Python temporal and habit-definition models and queries.
+- Versioned declarative JSON layout templates, period assignments and defaults,
+  immutable revisions, typed metric definitions, and canonical dated
+  observations.
+- Dynamic metric-source discovery and manual source selections in the domain
+  layer. These are not yet a chart-rendering or habit-capture UI.
+- Tests and verification scripts for persistence, temporal behavior, layout
+  contracts, and offscreen Qt/QML startup.
+
+See the [roadmap](ROADMAP.md) and
+[verification reports](docs/verification/phase-0.md) for phase details.
+
+## Not implemented yet
+
+- Phase 5 Layout Studio, component-tree rendering, drag-and-drop, preview,
+  undo/redo, and keyboard layout editing.
+- Habit check-in and general structured-input capture interfaces.
+- Finished task, goal, event, rich-note, and image workflows.
+- Chart rendering and broader analytics/rollups.
+- Self-contained dependency export, integrated backup, and recovery UX.
+- Native desktop accessibility/platform validation or mobile support.
+
+The presence of a domain contract does not imply its corresponding user
+interface or workflow is complete. Do not treat this pre-alpha build as a
+production personal-data system.
+
+## Architecture
+
+- **Python 3.14** for the application and typed, Qt-independent domain layer.
+- **PySide6 / Qt Quick / QML** for the desktop presentation.
+- **Markdown + YAML** for canonical pages, habit definitions, metric definitions,
+  and dated observations.
+- **Versioned JSON** for inert layout configuration. Vault-provided code or QML
+  is never executed.
+- **SQLite** only as a disposable index/cache reconstructed from canonical files.
+- **pytest** and **Ruff** for tests and static checks.
+
+The vault is local and offline by default. Local files are plaintext, not
+encrypted. No account is not anonymity, and local storage is not a backup.
+Choose a vault folder outside the source checkout; do not place personal vault
+data in this repository. Read [PRIVACY.md](PRIVACY.md) before using personal
+information.
+
+## System requirements
+
+- Linux x86_64 is the currently verified development platform.
+- Python 3.14. The package metadata currently requires `>=3.14,<3.15`.
+- A desktop environment for normal use. Headless checks use Qt's offscreen
+  platform and software Quick renderer.
+- Installation needs package access unless the pinned dependencies are already
+  available locally. Running the application does not require network access.
+
+Other operating systems and Python versions are not currently validated.
+
+## Install and launch
+
+From the repository root:
 
 ```bash
-python3 -m venv .venv
+python3.14 -m venv .venv
 .venv/bin/python -m pip install -r requirements.lock
 .venv/bin/python -m pip install --no-deps --no-build-isolation -e '.[dev]'
 .venv/bin/python -m habit_workspace
 ```
 
-A instalação pode precisar de internet; executar o aplicativo instalado não
-requer rede ou conta. Dependências não são instaladas globalmente. A janela usa
-a fonte sans-serif do sistema, sem baixar fontes ou recursos externos.
+The lock file pins the tested dependency versions; it is not hash-verified or a
+cross-platform lock. The editable install keeps development dependencies local
+to the virtual environment. Do not install project dependencies globally.
 
-Verificações:
+For a disposable local vault, choose a directory outside the repository and
+create it through the application or CLI:
+
+```bash
+.venv/bin/python -m habit_workspace vault create "$HOME/Documents/HabitWorkspace" --name "My vault"
+.venv/bin/python -m habit_workspace --vault "$HOME/Documents/HabitWorkspace"
+```
+
+Do not use a real personal vault for tests or verification scripts.
+
+## Tests and development
 
 ```bash
 .venv/bin/python -m ruff check .
 .venv/bin/python -m ruff format --check .
 .venv/bin/python -m pytest -q
 QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software .venv/bin/python -m habit_workspace --smoke-test
-.venv/bin/python -m pip wheel --no-deps --no-build-isolation --wheel-dir dist .
-```
-
-O smoke test verifica carregamento e encerramento QML. A verificação da Fase 2
-exercita entrada real do Qt e salva capturas renderizadas com cofres temporários:
-
-```bash
-.venv/bin/pyside6-qmllint -W 0 -i src/habit_workspace/presentation/qml/qmldir src/habit_workspace/presentation/qml/*.qml
-QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software .venv/bin/python tools/verify_phase2.py
-```
-
-Veja [verificação e roteiro manual da Fase 2](docs/verification/phase-2.md),
-[dependências](docs/dependencies.md) e [verificação da Fase 1](docs/verification/phase-1.md).
-A inspeção offscreen não substitui testes com o gerenciador de janelas, seletores
-nativos, GPU e leitor de tela no desktop.
-
-Preferências de tema, movimento, sidebar e até cinco caminhos de cofres recentes
-ficam no `QSettings` da máquina (no Linux, normalmente
-`$XDG_CONFIG_HOME/Habit Workspace/Habit Workspace.conf`, com o padrão do Qt quando
-a variável não está definida). Não são conteúdo do cofre. Nenhum cofre recente é
-aberto automaticamente; use Ctrl+O para escolhê-lo. Atalhos completos estão em
-Configurações. A busca filtra documentos da página atual; não é busca de conteúdo
-Markdown nem um motor de analytics.
-
-### Usar o cofre (diagnóstico da Fase 1)
-
-Escolha explicitamente uma pasta nova/vazia, preferencialmente fora deste
-repositório. Não há caminho pessoal fixo nem arquivos criados no repositório por
-padrão. Todos os comandos abaixo funcionam offline após a instalação:
-
-```bash
-.venv/bin/python -m habit_workspace vault create "$HOME/Documents/HabitWorkspace" --name "Meu cofre"
-.venv/bin/python -m habit_workspace vault open "$HOME/Documents/HabitWorkspace"
-.venv/bin/python -m habit_workspace vault new-note "$HOME/Documents/HabitWorkspace" --title "Minha nota" --body "Texto da nota"
-.venv/bin/python -m habit_workspace vault import "$HOME/Documents/HabitWorkspace" /caminho/pagina.md
-.venv/bin/python -m habit_workspace vault show "$HOME/Documents/HabitWorkspace" UUID_DO_DOCUMENTO
-.venv/bin/python -m habit_workspace vault scan "$HOME/Documents/HabitWorkspace"
-.venv/bin/python -m habit_workspace vault reindex "$HOME/Documents/HabitWorkspace"
-.venv/bin/python -m habit_workspace --vault "$HOME/Documents/HabitWorkspace"
-```
-
-`show` apresenta metadados, conteúdo e referências indisponíveis. Os comandos
-retornam JSON de diagnóstico, não uma interface final de edição Markdown.
-`import` aceita vários caminhos e retorna `imported`, `skipped`, `conflicting` e
-`invalid`. Um arquivo idêntico é ignorado; o mesmo UUID com conteúdo diferente
-exige comparação explícita dos arquivos. Nenhum comando substitui conflitos.
-Markdown sem frontmatter exige `import ... --as-note`; YAML inválido não é
-"consertado" nem descartado. Código dentro de documentos nunca é executado.
-
-`--vault` abre diretamente o cofre informado na interface. O watcher Qt atualiza
-listas, prévias e pendências após alterações externas. Importações idênticas não
-criam cópias; UUIDs conflitantes são bloqueados e ficam visíveis, com os caminhos
-para comparação no editor. A UI não sobrescreve arquivos conflitantes.
-
-Exportação `.hwpack`, backup integrado e resolução com substituição pertencem à
-Fase 9. Configurações informa essa limitação e orienta a cópia manual da pasta.
-A prévia de leitura é texto inerte abreviado; não carrega imagens ou URLs e não
-executa conteúdo. Edição rica e o renderizador de layouts ainda não fazem parte
-desta fase.
-
-Apagar **somente** `.habit-workspace/index.sqlite` e executar `open`/`reindex`
-reconstrói o cache a partir dos documentos. Nenhum documento depende do SQLite.
-É possível copiar a pasta inteira para outra localização, sem editar caminhos
-absolutos. Para demonstrar isso com dois cofres temporários gerados:
-
-```bash
 .venv/bin/python tools/verify_phase1.py
-.venv/bin/pyside6-qmllint -W 0 -i src/habit_workspace/presentation/qml/qmldir src/habit_workspace/presentation/qml/*.qml
-unshare --user --map-root-user --net .venv/bin/python -m pytest -q
-```
-
-O último comando requer suporte Linux a namespaces. Os testes também bloqueiam
-chamadas de rede no fluxo básico de persistência. Nenhum teste usa dados pessoais.
-
-Os arquivos são texto claro: local/offline não significa criptografia, anonimato
-ou backup. Salvamentos pela API preservam a revisão anterior em
-`.habit-workspace/backups/`; essas cópias também contêm dados pessoais e não têm
-limpeza automática. Consulte [privacidade](PRIVACY.md) e as
-[limitações de concorrência e recuperação](docs/verification/phase-1.md).
-
-As especificações abaixo continuam sendo os requisitos das fases futuras.
-
-Kit de **especificação** para desenvolver um aplicativo desktop com **Python + PySide6 / Qt Quick (QML)**. Não é um aplicativo pronto. Substitui a especificação v3 e preserva as decisões anteriores de períodos, hábitos, gráficos, file-first e privacidade.
-
-## Conceito consolidado
-- UI moderna inspirada nos princípios visuais de Linear, com cards, navegação temporal e microinterações. **O usuário não trabalha sobre Markdown cru**; usa um editor visual drag-and-drop de layouts.
-- Templates reutilizáveis e layouts visuais por período concreto; **um layout efetivo por ano/mês/semana/dia**, com histórico de versões e data de ativação.
-- Inputs criam ou vinculam **fontes de dados tipadas com IDs estáveis**; a posição dos blocos não determina o local nem o período de armazenamento de dados.
-- Modificar layout semanal e registrar novos valores faz os resumos e gráficos mensais **dinâmicos** considerarem novos dados elegíveis a partir da data de ativação. Filtros manuais de gráfico permanecem fixos.
-- Coffre local de Markdown/YAML, JSON de layout, imagens e Assets; SQLite é índice descartável/regenerável. Sem conta, nuvem ou internet obrigatória.
-
-## Arquivos
-- `LAYOUT_ENGINE.md` **NOVO — principal documento v4**, regras de templates, período único, componentes, versão, métricas, rollup e testes.
-- `PRODUCT.md` — produto e fluxo de uso.
-- `FILE_FORMAT.md` — formato file-first de páginas, layout JSON e medições.
-- `ARCHITECTURE.md` — camadas Python e Qt, regras de persistência.
-- `DESIGN_SYSTEM.md` — tema e Layout Studio.
-- `ROADMAP.md` — fases com critérios de aceitação.
-- `AGENTS.md` — instruções persistentes do Codex CLI.
-- `PROMPTS.md` — prompts sequenciais P0 a P10.
-- `PRIVACY.md` — segurança, backups e anonimato limitado.
-
-## Como começar
-1. Salve um commit/backup das especificações v3.
-2. Extraia os documentos v4 **na raiz do repositório do aplicativo**, substituindo os documentos antigos, não os dados pessoais do vault.
-3. Execute `codex`, entre em modo de planejamento (`/plan` se disponível) e envie P0 de `PROMPTS.md`.
-4. Valide o plano e execute uma fase por vez; testes de período/IDs/layout/rollup antes de funcionalidades visuais de dependência.
-
-## Nota de projeto
-Os JSON e YAML dos exemplos são **propostas de contrato**, não equivalem a um parser já implementado. Regras de migração devem ser verificadas antes de existir conteúdo real de usuários.
-
-## Phase 3 temporal domain
-
-Habits have one canonical Markdown file, an editable validity interval and an
-independent daily or ISO-weekday recurrence. The existing period document list
-shows matching definitions; no checklist/capture UI is introduced.
-
-```python
-from datetime import date
-from pathlib import Path
-from habit_workspace.application.vault import VaultSession
-from habit_workspace.application.habits import HabitService
-from habit_workspace.domain.temporal import PeriodRef, TemporalScope, Recurrence
-
-service = HabitService(VaultSession.open(Path("/your/existing/vault")))
-loaded = service.create(name="Read", period=PeriodRef.parse("day/2026-10-27"))
-loaded = service.update(
-    loaded,
-    scope=TemporalScope.from_inclusive(date(2026, 10, 27), date(2026, 12, 31)),
-    recurrence=Recurrence.weekdays((1, 2, 3, 4, 5)),
-)
-result = service.query(PeriodRef.parse("week/2026-W44"), today=date(2026, 10, 29))
-# Scheduled: October 27, 28, 29, 30. No completion records are created.
-```
-
-Retain `LoadedHabit` for revision-checked edits. Handle `HistoryImpactError` by
-reviewing its records before retrying with `acknowledge_history=True`; this never
-deletes records. Handle `ConflictError` by explicitly reloading/comparing files.
-Inspect query diagnostics and `session.index_error`; a cache error does not undo
-a successful canonical write. Run file operations and full queries outside GUI
-slots; navigation itself uses only the existing scan.
-
-Run the isolated, real-file acceptance demonstration:
-
-```bash
+.venv/bin/python tools/verify_phase2.py
 .venv/bin/python tools/verify_phase3.py
 ```
 
-It creates temporary vaults, demonstrates scope/recurrence edits, preserves a
-historical check-in, imports dependencies, moves a habit file, and rebuilds SQLite.
-The JSON output includes the actual canonical habit Markdown. Temporary fixtures
-are removed on exit. See [Phase 3 verification](docs/verification/phase-3.md).
+The pytest suite includes offscreen Qt/QML startup and the Phase 2 input/render
+check. The explicit smoke-test command checks that a QML window starts and exits.
+These checks do not replace testing with a native window manager, graphics
+hardware, platform file dialogs, and assistive technology.
+
+Before submitting changes, run the full checks above. Keep changes scoped to an
+approved roadmap phase; do not begin Phase 5 as part of repository maintenance.
+Never commit vault data, credentials, generated files, or dependency artifacts.
+
+## Roadmap
+
+| Phase | Status |
+| --- | --- |
+| 0 — Environment and minimal prototype | Complete |
+| 1 — File-first vault | Complete |
+| 2 — Desktop shell and navigation | Complete |
+| 3 — Temporal domain and canonical habit definitions | Complete |
+| 4 — Layout, field, assignment, and observation contracts | Complete |
+| 5 — Visual Layout Studio and renderer | Not started |
+| 6 — Habit and structured capture | Pending |
+| 7 — Planning, notes, images, and calendar | Pending |
+| 8 — Charts and cross-period rollups | Pending |
+| 9 — Packages, backup, stabilization, and distribution | Pending |
+
+The [ROADMAP.md](ROADMAP.md) and specifications are authoritative for scope and
+acceptance criteria.
+
+## Contributing
+
+Early-stage contributions are welcome, especially focused bug reports, test
+coverage, documentation improvements, accessibility feedback, and review of
+file-format and privacy behavior. Please read [CONTRIBUTING.md](CONTRIBUTING.md)
+and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) first. Do not include personal
+vault data in an issue, pull request, test fixture, screenshot, or log.
+
+## Source availability and licensing
+
+This repository is **source-available**, not OSI-approved open-source software.
+No project license has been selected or added yet. Public visibility alone does
+not grant permission to use, modify, or redistribute Habit Workspace; until a
+license is approved and included, assume all rights are reserved.
+
+The maintainer is evaluating the PolyForm Noncommercial License 1.0.0 as a
+possible future license. It has **not** been adopted, and no noncommercial
+permission is granted by this README. See the
+[licensing review](docs/licensing-review.md) for the evaluation and outstanding
+decisions. Third-party dependencies retain their own licenses; see
+[dependency licensing notes](docs/dependencies.md).
+
+Do not publish packages or represent this project as unrestricted open source.

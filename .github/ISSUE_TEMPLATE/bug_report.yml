@@ -1,0 +1,44 @@
+name: Bug report
+description: Report a reproducible defect using synthetic or redacted data.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not attach vaults, personal data, credentials, or private logs.
+        For security vulnerabilities, use the private process in SECURITY.md.
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: Describe the observed behavior and what you expected.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Use a new temporary vault and synthetic content.
+      placeholder: "1. Open a temporary vault..."
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Operating system and Python version
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant sanitized logs
+      description: Remove names, paths, UUIDs, vault contents, and other personal data.
+    validations:
+      required: false

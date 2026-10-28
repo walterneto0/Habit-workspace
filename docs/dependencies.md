@@ -1,10 +1,15 @@
-# Dependency inventory (Phases 0–2)
+# Dependency inventory and license review (Phases 0–4)
 
 Initial verified environment: Linux x86_64, Python 3.14.7, pip 25.1.1.
 `requirements.lock` records the complete resolved application/development package
 set, excluding the editable application and pip. It is an exact-version snapshot,
 not a hash-verified or cross-platform lock. Platform support must be verified
 before broadening the Python range or distributing binaries.
+
+Dependabot is configured for monthly Python updates from `pyproject.toml` and
+monthly GitHub Actions updates. The custom-named `requirements.lock` should be
+reviewed and regenerated manually after dependency updates; do not assume
+Dependabot updates that snapshot.
 
 | Packages | Purpose | Installed metadata license expression |
 | --- | --- | --- |
@@ -24,13 +29,15 @@ The full PySide6 distribution brings additional modules; its installation does
 not mean those modules are part of the application design.
 
 No fonts or proprietary icon assets are bundled. The system supplies sans-serif.
-No application license has been chosen on behalf of the owner.
+No application license has been selected. Habit Workspace source and
+third-party dependency licenses are separate; see
+[`licensing-review.md`](licensing-review.md).
 
-Before Phase 9 distribution, audit the exact shipped Qt modules and third-party
-components, retain their license texts/notices, and document the applicable
-source/relinking provisions for the chosen licensing route. Package-level
+Before distributing an application or dependency bundle, audit the exact Qt
+modules, plugins, and third-party components shipped; retain required license
+texts/notices; and document applicable source/relinking provisions. Package
 metadata alone is not a completed redistribution audit. No release artifact
-has been approved for public distribution in Phase 0.
+has been approved for distribution.
 
 All dependencies were installed into `.venv`; nothing was installed globally.
 Initial installation required network access. Subsequent application startup was

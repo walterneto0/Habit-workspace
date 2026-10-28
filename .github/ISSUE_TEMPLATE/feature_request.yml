@@ -1,0 +1,36 @@
+name: Feature request
+description: Suggest a scoped improvement or discuss a roadmap need.
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Check ROADMAP.md first. Do not include personal vault contents or
+        private information.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem should this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Explain the user-visible outcome, not only an implementation.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives or constraints
+    validations:
+      required: false
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Roadmap fit
+      options:
+        - label: I checked the current roadmap and identified the relevant phase.
+          required: true

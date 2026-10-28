@@ -1,8 +1,74 @@
+# Python environments, bytecode, and test/tool caches
 .venv/
+venv/
+ENV/
 __pycache__/
 *.py[cod]
 .pytest_cache/
 .ruff_cache/
+.mypy_cache/
+.tox/
+.nox/
+.hypothesis/
+.coverage
+.coverage.*
+htmlcov/
+
+# Packaging and build output
 *.egg-info/
 build/
 dist/
+pip-wheel-metadata/
+*.whl
+*.tar.gz
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+!.env.template
+*.pem
+*.key
+id_rsa
+id_rsa.*
+id_ed25519
+id_ed25519.*
+
+# Qt / QML generated caches
+*.qmlc
+*.jsc
+.qmlcache/
+qmlcachegen/
+
+# Linux desktop and editor artifacts
+*~
+*.swp
+*.swo
+.directory
+.Trash-*
+.nfs*
+
+# Local vault metadata, database indexes, and personal exports.
+# Test fixtures remain trackable under tests/fixtures/ or tests/data/.
+**/.habit-workspace/
+**/index.sqlite
+**/index.sqlite-*
+*.sqlite
+*.sqlite3
+*.db
+*.hwpack
+!/tests/fixtures/**/*.sqlite
+!/tests/fixtures/**/*.sqlite3
+!/tests/fixtures/**/*.db
+!/tests/data/**/*.sqlite
+!/tests/data/**/*.sqlite3
+!/tests/data/**/*.db
+
+# Common root-level personal vault folders; choose vaults outside this checkout.
+/vault/
+/vaults/
+/personal-vault/
+/personal-vaults/
+/Vault/
+/HabitWorkspace/
+/MyVault/
