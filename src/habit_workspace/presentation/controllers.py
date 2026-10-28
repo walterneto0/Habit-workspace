@@ -2,7 +2,7 @@
 
 import re
 from dataclasses import replace
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 from uuid import uuid4
 
@@ -67,11 +67,49 @@ class WorkspaceController(QObject):
         self._preview = {}
         self._pending = None
         self._state = {}
+        from habit_workspace.presentation.layout_studio import LayoutStudio
+
+        self.studio = LayoutStudio(self)
         self._publish()
 
     @Property("QVariantMap", notify=changed)
     def state(self):
         return self._state
+
+    @Property(QObject, constant=True)
+    def layoutStudio(self):
+        return self.studio
+
+    def _composition(self):
+        if not self.session or not self.navigation.period:
+            return {}
+        from habit_workspace.application.layouts import LayoutService
+        from habit_workspace.presentation.layout_studio import composition
+
+        try:
+            resolved = LayoutService.resolve_report(
+                self.session.report, self.navigation.period_ref, datetime.now().astimezone()
+            )
+            return dict(
+                blocks=composition(resolved.layout, self.session.report, self.session.root),
+                columns=resolved.layout.grid.columns,
+                issues=list(resolved.issues),
+                activation=resolved.assignment.effective_at.isoformat()
+                if resolved.assignment
+                else "Padrão interno",
+            )
+        except (ValueError, OSError) as error:
+            return dict(blocks=[], columns=1, issues=[str(error)], activation="Indisponível")
+
+    def _guard_studio(self):
+        if self.studio.draft:
+            self.studio.message = "Salve ou descarte o rascunho antes de navegar."
+            self.studio.changed.emit()
+            self._notice_message(
+                "Feche o Layout Studio: salve ou descarte o rascunho antes de navegar.", True
+            )
+            return True
+        return False
 
     def _notice_message(self, text: str, error: bool = False) -> None:
         self._notice, self._notice_error = text, error
@@ -196,6 +234,7 @@ class WorkspaceController(QObject):
             ]
         recent = self.settings.value("recentVaults", [], type=list)
         state = {
+            "composition": self._composition(),
             "hasVault": self.session is not None,
             "vaultName": self.session.info.name if self.session else "Seu espaço pessoal",
             "vaultPath": str(self.session.root) if self.session else "",
@@ -249,6 +288,8 @@ class WorkspaceController(QObject):
 
     @Slot(str, str, result=bool)
     def createVault(self, directory: str, name: str) -> bool:
+        if self._guard_studio():
+            return False
         try:
             self._attach(VaultSession.create(local_path(directory), name.strip()))
             return True
@@ -260,6 +301,8 @@ class WorkspaceController(QObject):
 
     @Slot(str, result=bool)
     def openVault(self, directory: str) -> bool:
+        if self._guard_studio():
+            return False
         try:
             self._attach(VaultSession.open(local_path(directory)))
             return True
@@ -272,6 +315,8 @@ class WorkspaceController(QObject):
     @Slot(str)
     @Slot(str, str)
     def navigate(self, view: str, value: str = ""):
+        if self._guard_studio():
+            return False
         try:
             self.navigation.select(view, value)
             self._query = ""
@@ -282,6 +327,8 @@ class WorkspaceController(QObject):
 
     @Slot(int)
     def movePeriod(self, amount: int):
+        if self._guard_studio():
+            return False
         try:
             self.navigation.move(amount)
             self._selected = ""
@@ -398,6 +445,8 @@ class WorkspaceController(QObject):
 
     @Slot(result=bool)
     def confirmImport(self) -> bool:
+        if self._guard_studio():
+            return False
         if not self.session or not self._pending or self._preview.get("conflict"):
             return False
         path, revision, as_note = self._pending

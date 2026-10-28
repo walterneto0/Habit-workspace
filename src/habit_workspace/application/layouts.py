@@ -240,11 +240,30 @@ class LayoutService:
         *,
         new_fields: tuple[FieldDefinition, ...] = (),
         expected_page: LoadedDocument | None = None,
+        expected_report: ScanReport | None = None,
+        original_layout: LoadedLayout | None = None,
     ) -> LoadedDocument:
         assignment = Assignment(layout.id, layout.version, effective_at)
         with writer_lock(self.session.root):
             report = scan(self.session.root)
             page = period_page(report, period)
+            if expected_report is not None:
+                before = period_page(expected_report, period)
+                if (None if page is None else (page.path, page.revision)) != (
+                    None if before is None else (before.path, before.revision)
+                ):
+                    raise ConflictError(
+                        "Página alterada; descarte e reabra o Studio para comparar."
+                    )
+                if {(d.path, d.revision) for d in report.defaults} != {
+                    (d.path, d.revision) for d in expected_report.defaults
+                }:
+                    raise ConflictError("Padrões alterados; reabra o Studio para comparar.")
+                for loaded in (*expected_report.layouts, *expected_report.defaults):
+                    if read_bytes(loaded.path)[1] != loaded.revision:
+                        raise ConflictError(
+                            "Layout ou padrão alterado externamente; reabra o Studio."
+                        )
             if expected_page and (
                 page is None
                 or page.path != expected_page.path
@@ -302,7 +321,9 @@ class LayoutService:
                     self.session.repository.create(
                         f"Items/Metrics/{field.id}.md", field_document(field)
                     )
-            self._publish(layout)
+            self._publish(
+                layout, raw=encode_layout(layout, original_layout) if original_layout else None
+            )
             result = self._assign(period, assignment, expected_page or page)
             self.session.scan()
             return result
