@@ -20,7 +20,7 @@ habit-workspace = "habit_workspace.__main__:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-"habit_workspace.presentation" = ["qml/*.qml"]
+"habit_workspace.presentation" = ["qml/*.qml", "qml/qmldir"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

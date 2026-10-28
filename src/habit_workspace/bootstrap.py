@@ -1,59 +1,50 @@
-"""Qt composition root; application and domain logic will remain outside Qt."""
+"""Qt composition root; file/domain services remain independent of presentation."""
 
 import sys
 from importlib.resources import as_file, files
 from pathlib import Path
 
-from PySide6.QtCore import QTimer, QUrl
+from PySide6.QtCore import QLibraryInfo, QLocale, QTimer, QTranslator, QUrl
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtQml import QQmlApplicationEngine
+from PySide6.QtQuickControls2 import QQuickStyle
+
+from habit_workspace.presentation.controllers import WorkspaceController
 
 
 def run(*, smoke_test: bool = False, vault_directory: Path | None = None) -> int:
+    QQuickStyle.setStyle("Basic")
+    QLocale.setDefault(QLocale("pt_BR"))
     app = QGuiApplication([sys.argv[0]])
     app.setApplicationName("Habit Workspace")
     app.setOrganizationName("Habit Workspace")
+    translator = QTranslator(app)
+    if translator.load(
+        QLocale("pt_BR"),
+        "qtbase",
+        "_",
+        QLibraryInfo.path(QLibraryInfo.LibraryPath.TranslationsPath),
+    ):
+        app.installTranslator(translator)
     engine = QQmlApplicationEngine()
+    controller = WorkspaceController(app)
+    if vault_directory is not None and not controller.openVault(str(vault_directory)):
+        print(f"Habit Workspace: {controller.state['notice']}", file=sys.stderr)
+        return 1
+    engine.setInitialProperties({"backend": controller})
     qml_errors: list[str] = []
-    watcher = None
-    if vault_directory is not None:
-        from habit_workspace.application.vault import VaultSession
-        from habit_workspace.domain.documents import DocumentError
-        from habit_workspace.vault.watcher import VaultWatcher
-
-        try:
-            session = VaultSession.open(vault_directory)
-        except (DocumentError, OSError) as error:
-            print(f"Habit Workspace: {error}", file=sys.stderr)
-            return 1
-        watcher = VaultWatcher(session, app)
-
-        def refresh_status(report) -> None:
-            text = (
-                f"{session.info.name} · {len(report.documents)} documentos\n"
-                f"{len(report.invalid)} arquivos inválidos · {len(report.conflicts)} conflitos · "
-                f"{len(report.missing_references)} referências indisponíveis"
-            )
-            engine.rootObjects()[0].setProperty("vaultStatus", text)
-
-        watcher.refreshed.connect(refresh_status)
-        watcher.failed.connect(
-            lambda error: engine.rootObjects()[0].setProperty("vaultStatus", error)
-        )
 
     def capture_errors(errors: list) -> None:
         qml_errors.extend(error.toString() for error in errors)
 
     engine.warnings.connect(capture_errors)
-    resource = files("habit_workspace.presentation").joinpath("qml/Main.qml")
-    with as_file(resource) as qml_path:
-        engine.load(QUrl.fromLocalFile(str(qml_path)))
+    resource = files("habit_workspace.presentation").joinpath("qml")
+    with as_file(resource) as qml_directory:
+        engine.load(QUrl.fromLocalFile(str(qml_directory / "Main.qml")))
         if len(engine.rootObjects()) != 1:
             print("Habit Workspace: failed to create the QML window.", file=sys.stderr)
+            controller.close()
             return 1
-        if watcher is not None:
-            watcher.start()
-
         if smoke_test:
 
             def finish_smoke_test() -> None:
@@ -65,9 +56,9 @@ def run(*, smoke_test: bool = False, vault_directory: Path | None = None) -> int
                     print("Habit Workspace: QML smoke test passed (one visible root window).")
                     app.exit(0)
 
-            QTimer.singleShot(300, finish_smoke_test)
-
+            QTimer.singleShot(400, finish_smoke_test)
         result = app.exec()
-        if watcher is not None:
-            watcher.stop()
+        controller.close()
+        # Destroy QML bindings while their Python QObject still exists.
+        engine.deleteLater()
     return result

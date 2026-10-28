@@ -88,3 +88,18 @@ Fluxo de leitura: QML -> caso de uso -> índice (se válido) -> repositório de 
 - Guardar `active_from` na definição do campo e `effective_at` no histórico do layout; mudança visual sem campo novo não altera contagens.
 - Operações multi-documento (novo JSON + atribuição de página + eventualmente definição de campo) não são atomicamente garantidas pelo filesystem como conjunto: usar escrita ordenada, retries idempotentes e recovery journal simples se necessário.
 - Testar comparação dos gráficos antes/depois de reindexação, versões históricas e semana ISO cruzando meses.
+
+## Perfil implementado da Fase 2
+
+`presentation/controllers.py` adapta `VaultSession`, `ImportService` e
+`VaultWatcher` a um estado Qt observável. `presentation/navigation.py` contém
+somente rotas de apresentação e cálculos de calendário, sem escopo, recorrência,
+resolver de layouts ou agregação. As camadas de domínio/aplicação continuam sem
+importar Qt. Os componentes em `presentation/qml/` compartilham tokens de tema.
+
+A UI não grava páginas ao navegar, não infere períodos de caminhos e não executa
+layouts externos. Preferências de tema, movimento, sidebar e caminhos recentes
+usam QSettings da máquina; os formatos canônicos da Fase 1 não foram alterados.
+A prévia documental é limitada a texto inerte e snapshots já armazenados. A
+varredura síncrona e os limites de concorrência da Fase 1 continuam aplicáveis;
+veja `docs/verification/phase-2.md` antes de assumir suporte a cofres grandes.

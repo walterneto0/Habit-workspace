@@ -1,4 +1,4 @@
-# Dependency inventory (Phases 0–1)
+# Dependency inventory (Phases 0–2)
 
 Initial verified environment: Linux x86_64, Python 3.14.7, pip 25.1.1.
 `requirements.lock` records the complete resolved application/development package
@@ -44,3 +44,10 @@ Strict domain validation runs after parsing and before writing. No unsafe YAML
 constructor, executable template engine, network resource loader, or downloaded
 code is invoked by the application. Version constraints and the exact snapshot
 are recorded in `pyproject.toml` and `requirements.lock`.
+
+Phase 2 adds no dependencies, downloaded fonts, or icon packages. Small geometric
+icons are original QML Canvas drawings. The UI uses Qt Quick Controls Basic,
+QtQuick.Dialogs, QSettings and QDesktopServices from the existing Qt distribution;
+QDesktopServices opens local directories only after a user action. Document
+previews use plain text and never fetch images or execute markup. The verification
+script additionally uses the already installed QtTest module for input simulation.

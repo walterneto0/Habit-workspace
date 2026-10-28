@@ -27,3 +27,20 @@ def test_qml_resource_is_packaged():
     resource = files("habit_workspace.presentation").joinpath("qml/Main.qml")
     assert resource.is_file()
     assert "ApplicationWindow" in resource.read_text(encoding="utf-8")
+
+
+def test_shell_components_and_singleton_manifest_are_packaged():
+    directory = files("habit_workspace.presentation").joinpath("qml")
+    assert "singleton Theme" in directory.joinpath("qmldir").read_text()
+    for name in (
+        "Theme",
+        "Sidebar",
+        "PeriodBrowser",
+        "VaultDialog",
+        "ImportDialog",
+        "DocumentList",
+        "DocumentDetails",
+        "SettingsPage",
+        "ActionButton",
+    ):
+        assert directory.joinpath(f"{name}.qml").is_file()
