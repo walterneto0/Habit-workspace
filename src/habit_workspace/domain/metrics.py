@@ -234,8 +234,14 @@ def field_from_mapping(hw: dict) -> FieldDefinition:
             hw.get("unit"),
             hw.get("aggregation", "none"),
             tuple(hw.get("options", ())),
-            validation.get("minimum"),
-            validation.get("maximum"),
+            float(validation["minimum"])
+            if isinstance(validation.get("minimum"), (int, float))
+            and not isinstance(validation["minimum"], bool)
+            else validation.get("minimum"),
+            float(validation["maximum"])
+            if isinstance(validation.get("maximum"), (int, float))
+            and not isinstance(validation["maximum"], bool)
+            else validation.get("maximum"),
             hw.get("temporal_policy", "daily"),
             hw.get("weekly_attribution", "separate"),
         )

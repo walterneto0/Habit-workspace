@@ -43,3 +43,34 @@ def test_desktop_input_and_render_verification(tmp_path):
     assert '"result": "PASS"' in result.stdout
     assert '"qmlWarnings": []' in result.stdout
     assert len(list((tmp_path / "screens").glob("*.png"))) >= 12
+
+
+def test_studio_window_and_keyboard_verification():
+    from pathlib import Path
+
+    script = Path(__file__).resolve().parents[1] / "tools/verify_phase5.py"
+    result = subprocess.run(
+        [sys.executable, str(script)],
+        env={**os.environ, "QT_QPA_PLATFORM": "offscreen", "QT_QUICK_BACKEND": "software"},
+        capture_output=True,
+        text=True,
+        timeout=45,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert '"qmlWarnings": []' in result.stdout
+
+
+def test_studio_pointer_property_and_reopen_verification():
+    from pathlib import Path
+
+    script = Path(__file__).resolve().parents[1] / "tools/verify_phase5_interaction.py"
+    result = subprocess.run(
+        [sys.executable, str(script)],
+        env={**os.environ, "QT_QPA_PLATFORM": "offscreen", "QT_QUICK_BACKEND": "software"},
+        capture_output=True,
+        text=True,
+        timeout=90,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert '"qmlWarnings": []' in result.stdout
+    assert not result.stderr, result.stderr

@@ -7,7 +7,7 @@ the durable source of truth.
 
 > **Status: pre-alpha.** Phases 0–4 are implemented. The application is useful
 > for exploring the vault, navigation, and domain/file contracts, but it is not
-> a finished habit tracker. Data capture, the visual layout editor, charts, and
+> a finished habit tracker. Data capture, complete layout editing, charts, and
 > backup/export workflows are incomplete. Use test or disposable data and keep
 > independent backups.
 
@@ -34,10 +34,16 @@ documentation is in English.
 See the [roadmap](ROADMAP.md) and
 [verification reports](docs/verification/phase-0.md) for phase details.
 
+Concrete period pages now offer **Abrir Layout Studio**: add/select/reorder/resize
+blocks, preview, undo/redo and save a new immutable revision for that period.
+New metrics require an explicit choice and are saved separately. Capture and chart
+calculations remain unavailable. See [verification and limitations](docs/verification/phase-5.md)
+and [keyboard operations](docs/layout-studio-shortcuts.md).
+
 ## Not implemented yet
 
-- Phase 5 Layout Studio, component-tree rendering, drag-and-drop, preview,
-  undo/redo, and keyboard layout editing.
+- Complete Phase 5 acceptance: comprehensive component properties, specialized
+  input shapes, validated pointer drag/drop and native visual review.
 - Habit check-in and general structured-input capture interfaces.
 - Finished task, goal, event, rich-note, and image workflows.
 - Chart rendering and broader analytics/rollups.
@@ -131,7 +137,7 @@ Never commit vault data, credentials, generated files, or dependency artifacts.
 | 2 — Desktop shell and navigation | Complete |
 | 3 — Temporal domain and canonical habit definitions | Complete |
 | 4 — Layout, field, assignment, and observation contracts | Complete |
-| 5 — Visual Layout Studio and renderer | Not started |
+| 5 — Visual Layout Studio and renderer | Partial; integrated workflow available |
 | 6 — Habit and structured capture | Pending |
 | 7 — Planning, notes, images, and calendar | Pending |
 | 8 — Charts and cross-period rollups | Pending |

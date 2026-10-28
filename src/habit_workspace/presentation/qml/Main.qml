@@ -43,6 +43,12 @@ ApplicationWindow {
             }
         }
     }
+    LayoutStudio {
+        id: studioView
+        anchors.fill: parent
+        z: 20
+        studio: window.backend.layoutStudio
+    }
     // Tab navigation must reveal controls below the viewport, including in dialogs.
     onActiveFocusItemChanged: Qt.callLater(ensureFocusVisible)
     function ensureFocusVisible() {
@@ -117,6 +123,8 @@ ApplicationWindow {
         enabled: !vaultDialog.visible && !importDialog.visible && !propertiesDrawer.visible
         onActivated: window.backend.clearSelection()
     }
+
+    onClosing: function(close) { if (backend.layoutStudio.state.active) { close.accepted = false; studioView.discard(); } }
 
     RowLayout {
         anchors.fill: parent
@@ -420,6 +428,22 @@ ApplicationWindow {
                                 backend: window.backend
                                 modelState: window.modelState
                                 visible: !!window.modelState.period
+                            }
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                visible: window.modelState.hasVault && !!window.modelState.period
+                                ActionButton {
+                                    text: qsTr("Abrir Layout Studio")
+                                    objectName: "open-layout-studio"
+                                    onClicked: window.backend.layoutStudio.open()
+                                }
+                                UiText { Layout.fillWidth: true; text: qsTr("Ativo desde: ") + (window.modelState.composition.activation || "") }
+                                UiText { Layout.fillWidth: true; text: (window.modelState.composition.issues || []).join("\n"); color: Theme.warning; visible: text.length > 0 }
+                                LayoutComposition {
+                                    Layout.fillWidth: true
+                                    blocks: window.modelState.composition.blocks || []
+                                    gridColumns: window.modelState.composition.columns || 1
+                                }
                             }
                             Input {
                                 id: search
