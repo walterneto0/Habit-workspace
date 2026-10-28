@@ -52,7 +52,12 @@ class VaultSession:
     def create_document(self, relative: str | Path, document: Document) -> LoadedDocument:
         document.validate()
         with writer_lock(self.root):
-            if any(d.document.id == document.id for d in scan(self.root).documents):
+            report = scan(self.root)
+            if (
+                any(d.document.id == document.id for d in report.documents)
+                or any(d.layout.id == document.id for d in report.layouts)
+                or any(d.id == document.id for d in report.defaults)
+            ):
                 raise ConflictError(f"Document UUID already exists: {document.id}")
             loaded = self.repository.create(relative, document)
             self.scan()

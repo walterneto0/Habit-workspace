@@ -138,5 +138,6 @@ Current scope and recurrence are editable definitions, not versioned historical
 schedules. Existing records always survive edits, and out-of-schedule records are
 reported separately. Archive metadata is available to callers; historical queries
 include archived definitions rather than silently modifying their validity.
-Layout assignments, metric definitions, capture UI and analytics remain in their
-later roadmap phases.
+Phase 4 adds versioned layout assignments, metric definitions, canonical
+observations and file-derived source queries. Visual Layout Studio, habit capture
+UI and chart rendering/rollups remain in later roadmap phases.

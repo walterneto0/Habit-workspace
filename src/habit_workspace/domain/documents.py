@@ -23,6 +23,7 @@ class DocumentKind(StrEnum):
     MONTH = "month_page"
     YEAR = "year_page"
     HABIT = "habit"
+    METRIC = "metric_definition"
 
 
 def require(condition: bool, message: str) -> None:
@@ -182,6 +183,13 @@ class Document:
                 require(len(days) == len(set(days)), "Weekdays must be unique")
             if hw.get("archived_at") is not None:
                 timestamp(hw["archived_at"], "archived_at")
+        if self.kind == DocumentKind.METRIC:
+            from habit_workspace.domain.metrics import field_from_mapping
+
+            try:
+                field_from_mapping(hw)
+            except (ValueError, TypeError, KeyError, AttributeError) as error:
+                raise DocumentError(f"Invalid metric definition: {error}") from error
         previous = None
         for entry in sequence(hw.get("layout_history", []), "layout_history"):
             entry = mapping(entry, "layout assignment")
@@ -252,6 +260,23 @@ class Document:
                     require("value" in record, "Observation requires value")
                     label = "field_label_snapshot"
                 require(isinstance(record.get(label), str), f"{label} must be text")
+                if "source_period_ref" in record:
+                    try:
+                        PeriodRef(record["source_period_ref"])
+                    except ValueError as error:
+                        raise DocumentError("Invalid source_period_ref") from error
+                if "historical_entry" in record:
+                    require(
+                        type(record["historical_entry"]) is bool, "historical_entry must be boolean"
+                    )
+                    require(
+                        not record["historical_entry"]
+                        or (
+                            isinstance(record.get("provenance"), str)
+                            and bool(record["provenance"].strip())
+                        ),
+                        "Historical entry requires provenance",
+                    )
                 if "source_block_id" in record:
                     uuid_value(record["source_block_id"], "source_block_id")
 

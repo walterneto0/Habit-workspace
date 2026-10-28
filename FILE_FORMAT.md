@@ -274,3 +274,45 @@ Parsing remains possible through year 9999. Calculations requiring an exclusive
 boundary beyond `9999-12-31` raise an explicit range error rather than silently
 turning a closed scope into an open one; those existing documents remain readable.
 Desktop navigation retains its existing years 2–9998 range.
+
+## Implemented Phase 4 layout and metric profile
+
+Phase 4 adds runtime support for schema-v4 `metric_definition` Markdown documents
+and declarative schema-v4 layout JSON. Unsupported schema versions, unknown
+component types and malformed files are reported without rewriting their original
+bytes. There is no implicit migration of legacy embedded layouts.
+
+Layout JSON uses `kind: "layout_template"`, a stable UUID `id`, immutable positive
+`version`, `name`, a one- or two-column `grid`, and declarative `blocks`. Supported
+blocks are `checklist`, `list`, `table`, `chart`, `note`, `image`, `section`, and
+typed `<value_type>_input` components. Components have UUIDs, configuration,
+optional source bindings and grid placement. Layout files may be moved or renamed;
+identity is read from their contents. The scanner recognizes layout JSON and the
+optional `kind: "layout_defaults"` registry; other or invalid JSON files are
+diagnosed and left untouched. JSON is bounded by the same 2 MiB document limit,
+rejects duplicate keys and non-finite numbers, and is never executed.
+
+Period-page `layout_history` entries contain `layout_id`, `version` and a
+timezone-qualified `effective_at`. Strictly increasing effective instants define
+non-overlapping half-open revisions. Resolution uses the active explicit period
+assignment, then the active default for its period scale, then a deterministic
+built-in layout. Missing dependencies are disclosed and do not resurrect an older
+revision. `Templates/defaults.json` stores versioned defaults by period scale.
+
+A `metric_definition` is a canonical Markdown document with UUID, name, `value_type`,
+timezone-qualified `active_from`, tags, optional unit and validation bounds,
+aggregation metadata, and optional selection options. It may also declare a daily
+or weekly temporal policy. Daily observations are stored in the canonical daily
+page's `hw.observations`; records retain their UUID, `field_id`, label snapshot,
+observed date, timezone-qualified `recorded_at`, value, and optional source period
+and component IDs. Weekly observations require a source ISO week containing the
+observed date and an explicit month-attribution policy. A pre-activation observed
+date is accepted only with `historical_entry: true` and non-empty provenance; it
+does not create inferred missing or failed records.
+
+The application publishes new metric definitions, immutable layout revisions and
+period assignments in that order. These multi-file changes are not a filesystem
+transaction: a failure may leave an unassigned definition or revision, which is
+preserved and can be reused by an idempotent retry. The SQLite v2 index includes
+layout and assignment projections but remains disposable; scans and metric queries
+derive canonical results from the files.

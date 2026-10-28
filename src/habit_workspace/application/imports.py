@@ -58,9 +58,12 @@ class ImportService:
                         )
                     else:
                         document = decode(raw)
-                    entries = [
-                        d for d in scan(self.session.root).documents if d.document.id == document.id
-                    ]
+                    report = scan(self.session.root)
+                    if any(d.layout.id == document.id for d in report.layouts) or any(
+                        d.id == document.id for d in report.defaults
+                    ):
+                        raise ConflictError("Document UUID collides with layout/defaults identity")
+                    entries = [d for d in report.documents if d.document.id == document.id]
                     details = dict(
                         source=source,
                         document_id=document.id,

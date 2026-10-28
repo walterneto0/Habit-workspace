@@ -59,7 +59,9 @@ class VaultWatcher(QObject):
             report = self.session.scan()
             # Atomic editor saves and renames drop OS watches: reattach every scan.
             wanted = {str(p) for p in report.directories}
-            wanted.update(str(d.path) for d in report.documents)
+            wanted.update(
+                str(d.path) for d in (*report.documents, *report.layouts, *report.defaults)
+            )
             wanted.update(
                 str(issue.path)
                 for issue in report.invalid

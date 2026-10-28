@@ -23,7 +23,7 @@ class IndexCache:
         try:
             with closing(sqlite3.connect(temporary)) as connection, connection:
                 connection.executescript("""
-                    PRAGMA user_version = 1;
+                    PRAGMA user_version = 2;
                     CREATE TABLE documents (
                         path TEXT PRIMARY KEY, id TEXT NOT NULL, kind TEXT NOT NULL,
                         schema_version INTEGER NOT NULL, title TEXT NOT NULL,
@@ -34,6 +34,11 @@ class IndexCache:
                         source_path TEXT, target_id TEXT, role TEXT, version INTEGER
                     );
                     CREATE TABLE issues (path TEXT, message TEXT);
+                    CREATE TABLE layouts (path TEXT PRIMARY KEY, id TEXT,
+                        version INTEGER, digest TEXT);
+                    CREATE TABLE layout_assignments (owner_id TEXT, period TEXT, layout_id TEXT,
+                        version INTEGER, effective_at TEXT);
+                    CREATE TABLE layout_defaults (path TEXT, id TEXT, digest TEXT);
                 """)
                 connection.executemany(
                     "INSERT INTO documents VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
@@ -62,6 +67,66 @@ class IndexCache:
                         )
                         for d in report.documents
                         for ref in d.document.references()
+                    ],
+                )
+                connection.executemany(
+                    "INSERT INTO layouts VALUES (?, ?, ?, ?)",
+                    [
+                        (
+                            str(d.path.relative_to(self.root)),
+                            str(d.layout.id),
+                            d.layout.version,
+                            d.revision.digest,
+                        )
+                        for d in report.layouts
+                    ],
+                )
+                connection.executemany(
+                    "INSERT INTO layout_defaults VALUES (?, ?, ?)",
+                    [
+                        (str(d.path.relative_to(self.root)), str(d.id), d.revision.digest)
+                        for d in report.defaults
+                    ],
+                )
+                connection.executemany(
+                    "INSERT INTO layout_assignments VALUES (?, ?, ?, ?, ?)",
+                    [
+                        (
+                            str(d.document.id),
+                            d.document.metadata["hw"].get(
+                                "period", "day/" + d.document.metadata["hw"].get("date", "")
+                            ),
+                            e["layout_id"],
+                            e["version"],
+                            e["effective_at"],
+                        )
+                        for d in report.documents
+                        for e in d.document.metadata["hw"].get("layout_history", [])
+                    ]
+                    + [
+                        (
+                            str(d.id),
+                            scale.value,
+                            str(e.layout_id),
+                            e.version,
+                            e.effective_at.isoformat(),
+                        )
+                        for d in report.defaults
+                        for scale, h in d.histories
+                        for e in h.entries
+                    ],
+                )
+                connection.executemany(
+                    "INSERT INTO references_cache VALUES (?, ?, ?, ?)",
+                    [
+                        (
+                            str(d.path.relative_to(self.root)),
+                            str(ref.target_id),
+                            ref.role,
+                            ref.version,
+                        )
+                        for d in (*report.layouts, *report.defaults)
+                        for ref in d.references()
                     ],
                 )
                 connection.executemany(

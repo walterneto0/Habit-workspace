@@ -10,7 +10,9 @@ Configurações. Nenhum cofre ou documento de exemplo é criado ao iniciar.
 
 Os serviços da Fase 1 e seus contratos continuam preservados. Markdown/YAML é a
 fonte canônica, SQLite é reconstruível, e navegar por períodos não grava páginas.
-Layout Studio, captura de hábitos e análises continuam em suas fases futuras.
+Os contratos de layout versionado, campos tipados e observações canônicas da Fase 4
+estão implementados. Layout Studio visual, captura de hábitos e análises gráficas
+continuam em suas fases futuras.
 
 Ambiente inicial: Linux e Python 3.14. Instalação local reproduzível:
 

@@ -9,6 +9,13 @@ from uuid import UUID
 from habit_workspace.domain.documents import Document, DocumentError
 from habit_workspace.vault.atomic_io import Revision, contained_path, read_bytes
 from habit_workspace.vault.format import decode
+from habit_workspace.vault.layouts import (
+    LoadedDefaults,
+    LoadedLayout,
+    decode_defaults,
+    decode_layout,
+    json_data,
+)
 
 
 @dataclass(frozen=True)
@@ -48,11 +55,15 @@ class ScanReport:
     conflicts: tuple[DuplicateIdentity, ...]
     missing_references: tuple[MissingReference, ...]
     directories: tuple[Path, ...]
+    layouts: tuple[LoadedLayout, ...] = ()
+    defaults: tuple[LoadedDefaults, ...] = ()
 
 
 def scan(root: Path) -> ScanReport:
     documents, invalid, directories = [], [], []
     by_id = defaultdict(list)
+    layouts, defaults = [], []
+    revisions = defaultdict(list)
 
     def walk_error(error: OSError) -> None:
         invalid.append(FileIssue(Path(error.filename or root), str(error)))
@@ -69,11 +80,21 @@ def scan(root: Path) -> ScanReport:
                 invalid.append(FileIssue(directory / name, "Symbolic-link directory skipped"))
         for name in sorted(filenames):
             path = directory / name
-            if path.suffix.lower() != ".md":
+            if path.suffix.lower() not in (".md", ".json"):
                 continue
             try:
                 contained_path(root, path.relative_to(root))
                 raw, revision = read_bytes(path)
+                if path.suffix.lower() == ".json":
+                    data = json_data(raw)
+                    if data.get("kind") == "layout_defaults":
+                        defaults.append(decode_defaults(path, raw, revision))
+                    else:
+                        parsed = decode_layout(raw)
+                        loaded_layout = LoadedLayout(path, parsed.layout, revision, raw)
+                        layouts.append(loaded_layout)
+                        revisions[(parsed.layout.id, parsed.layout.version)].append(loaded_layout)
+                    continue
                 loaded = LoadedDocument(path, decode(raw), revision)
                 documents.append(loaded)
                 by_id[loaded.document.id].append(loaded)
@@ -88,19 +109,49 @@ def scan(root: Path) -> ScanReport:
         for identifier, entries in by_id.items()
         if len(entries) > 1
     )
+    conflicts += tuple(
+        DuplicateIdentity(
+            identifier,
+            tuple(d.path for d in entries),
+            len({d.revision.digest for d in entries}) == 1,
+        )
+        for (identifier, _), entries in revisions.items()
+        if len(entries) > 1
+    )
+    # Layout IDs have multiple legitimate versions, but cannot identify documents/defaults.
+    identities = defaultdict(list)
+    for d in documents:
+        identities[d.document.id].append(("document", d.path))
+    for d in layouts:
+        identities[d.layout.id].append(("layout", d.path))
+    for d in defaults:
+        identities[d.id].append(("defaults", d.path))
+    conflicts += tuple(
+        DuplicateIdentity(identifier, tuple(path for _, path in entries), False)
+        for identifier, entries in identities.items()
+        if len({kind for kind, _ in entries}) > 1
+        or (entries[0][0] == "defaults" and len(entries) > 1)
+    )
+    if len(defaults) > 1:
+        invalid.extend(
+            FileIssue(d.path, "Multiple default registries; resolve explicitly") for d in defaults
+        )
+    for d in defaults:
+        if d.id in by_id:
+            invalid.append(FileIssue(d.path, "Default registry UUID collides with document"))
+    report = ScanReport(
+        tuple(documents),
+        tuple(invalid),
+        conflicts,
+        (),
+        tuple(directories),
+        tuple(layouts),
+        tuple(defaults),
+    )
     missing = []
     for loaded in documents:
         for reference in loaded.document.references():
-            targets = by_id.get(reference.target_id, [])
-            reason = None
-            if reference.role in ("layout_id", "field_id"):
-                reason = "Dependency type unavailable in Phase 1"
-            elif not targets:
-                reason = "Referenced document is missing or invalid"
-            elif len(targets) > 1:
-                reason = "Referenced UUID is ambiguous"
-            elif reference.role == "habit_id" and targets[0].document.kind != "habit":
-                reason = "Referenced document is not a habit"
+            reason = reference_problem(report, reference)
             if reason:
                 missing.append(
                     MissingReference(
@@ -112,6 +163,51 @@ def scan(root: Path) -> ScanReport:
                         reference.version,
                     )
                 )
+    for loaded in (*layouts, *defaults):
+        identifier = loaded.layout.id if isinstance(loaded, LoadedLayout) else loaded.id
+        for reference in loaded.references():
+            reason = reference_problem(report, reference)
+            if reason:
+                missing.append(
+                    MissingReference(
+                        identifier,
+                        loaded.path,
+                        reference.target_id,
+                        reference.role,
+                        reason,
+                        reference.version,
+                    )
+                )
     return ScanReport(
-        tuple(documents), tuple(invalid), conflicts, tuple(missing), tuple(directories)
+        tuple(documents),
+        tuple(invalid),
+        conflicts,
+        tuple(missing),
+        tuple(directories),
+        tuple(layouts),
+        tuple(defaults),
     )
+
+
+def reference_problem(report: ScanReport, reference) -> str | None:
+    if any(c.document_id == reference.target_id for c in report.conflicts):
+        return "Referenced UUID is ambiguous"
+    if reference.role == "layout_id":
+        targets = [
+            d
+            for d in report.layouts
+            if d.layout.id == reference.target_id and d.layout.version == reference.version
+        ]
+        return None if len(targets) == 1 else "Referenced layout revision is missing or invalid"
+    targets = [d.document for d in report.documents if d.document.id == reference.target_id]
+    if len(targets) != 1:
+        return "Referenced document is missing, invalid, or ambiguous"
+    expected = {
+        "habit_id": ("habit",),
+        "field_id": ("metric_definition",),
+        "note_id": ("note", "page", "year_page", "month_page", "week_page", "day_page"),
+        "source_id": ("habit", "metric_definition"),
+    }.get(reference.role)
+    if expected and targets[0].kind not in expected:
+        return f"Referenced document has wrong kind; expected {expected}"
+    return None

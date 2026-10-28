@@ -1,6 +1,7 @@
 """Presentation adapter over Phase 1 services. Never owns canonical document data."""
 
 import re
+from dataclasses import replace
 from datetime import date
 from pathlib import Path
 from uuid import uuid4
@@ -15,6 +16,7 @@ from habit_workspace.presentation.navigation import Navigation, long_date
 from habit_workspace.vault.atomic_io import read_bytes
 from habit_workspace.vault.format import decode
 from habit_workspace.vault.habits import habit_from_document
+from habit_workspace.vault.scanner import reference_problem
 from habit_workspace.vault.watcher import VaultWatcher
 
 KIND_LABELS = {
@@ -25,6 +27,7 @@ KIND_LABELS = {
     "week_page": "Página semanal",
     "day_page": "Página diária",
     "habit": "Definição de hábito",
+    "metric_definition": "Definição de campo",
 }
 
 
@@ -119,8 +122,8 @@ class WorkspaceController(QObject):
         roles = {
             "habit_id": "Hábito",
             "origin_page_id": "Página de origem",
-            "layout_id": "Layout (disponível em fase futura)",
-            "field_id": "Campo (disponível em fase futura)",
+            "layout_id": "Layout",
+            "field_id": "Campo",
         }
         issues += [
             {
@@ -360,20 +363,16 @@ class WorkspaceController(QObject):
             conflict = bool(matches) and not (
                 len(matches) == 1 and matches[0].revision.digest == revision.digest
             )
-            candidates = [entry.document for entry in report.documents]
+            preview_report = report
             if not matches:
-                candidates.append(doc)
-            missing = 0
-            for reference in doc.references():
-                targets = [
-                    candidate for candidate in candidates if candidate.id == reference.target_id
-                ]
-                if (
-                    reference.role in ("layout_id", "field_id")
-                    or len(targets) != 1
-                    or (reference.role == "habit_id" and targets[0].kind != "habit")
-                ):
-                    missing += 1
+                from habit_workspace.vault.scanner import LoadedDocument
+
+                preview_report = replace(
+                    report, documents=report.documents + (LoadedDocument(path, doc, revision),)
+                )
+            missing = sum(
+                reference_problem(preview_report, ref) is not None for ref in doc.references()
+            )
             self._preview = {
                 "title": doc.title or path.stem,
                 "kind": KIND_LABELS[doc.kind],

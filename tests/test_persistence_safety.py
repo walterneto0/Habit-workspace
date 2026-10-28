@@ -147,7 +147,7 @@ def test_missing_layout_is_disclosed_without_touching_unknown_blocks(session, tm
     source.write_bytes(encode(document))
     result = ImportService(session).import_files([source])
     assert result.imported[0].missing_references[0].role == "layout_id"
-    assert "Phase 1" in result.imported[0].missing_references[0].reason
+    assert "missing or invalid" in result.imported[0].missing_references[0].reason
 
 
 def test_invalid_and_symlinked_manifest_are_not_modified(session, tmp_path):
