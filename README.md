@@ -1,5 +1,43 @@
 # Habit Workspace — Codex Specification Kit v4
 
+## Desenvolvimento — Fase 0
+
+A base técnica contém uma janela Qt Quick mínima em português. Cofres, dados de
+hábitos e Layout Studio ainda não estão implementados. Nenhum dado pessoal é
+criado ao iniciar o aplicativo.
+
+Ambiente inicial: Linux e Python 3.14. Instalação local reproduzível:
+
+```bash
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements.lock
+.venv/bin/python -m pip install --no-deps --no-build-isolation -e '.[dev]'
+.venv/bin/python -m habit_workspace
+```
+
+A instalação pode precisar de internet; executar o aplicativo instalado não
+requer rede ou conta. Dependências não são instaladas globalmente. A janela usa
+a fonte sans-serif do sistema, sem baixar fontes ou recursos externos.
+
+Verificações:
+
+```bash
+.venv/bin/python -m ruff check .
+.venv/bin/python -m ruff format --check .
+.venv/bin/python -m pytest -q
+QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software .venv/bin/python -m habit_workspace --smoke-test
+.venv/bin/python -m pip wheel --no-deps --no-build-isolation --wheel-dir dist .
+```
+
+O teste offscreen verifica carregamento e encerramento QML, não aprova qualidade
+visual nem integração completa com o desktop. Veja
+[dependências](docs/dependencies.md) e
+[verificação da Fase 0](docs/verification/phase-0.md).
+
+O cofre pessoal será escolhido pelo usuário na Fase 1 e deve ficar fora deste
+repositório por padrão. As especificações abaixo continuam sendo os requisitos
+das fases futuras.
+
 Kit de **especificação** para desenvolver um aplicativo desktop com **Python + PySide6 / Qt Quick (QML)**. Não é um aplicativo pronto. Substitui a especificação v3 e preserva as decisões anteriores de períodos, hábitos, gráficos, file-first e privacidade.
 
 ## Conceito consolidado
