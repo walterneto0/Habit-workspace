@@ -13,5 +13,7 @@ artifacts.
   dependency update configuration, and least-privilege CI.
 - Licensed original project source under PolyForm Noncommercial 1.0.0; third-party
   dependency terms remain separate.
-- Layout Studio UI, structured capture interfaces, chart rendering, and
-  distribution workflows remain unimplemented.
+- Phase 6: tracking mode on period pages with habit create/edit form, idempotent
+  habit check-ins and typed field observations in the canonical day file, stale
+  external-edit detection, and GUI acceptance script `tools/verify_phase6.py`.
+- Chart rendering and distribution workflows remain unimplemented.

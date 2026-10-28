@@ -275,6 +275,24 @@ boundary beyond `9999-12-31` raise an explicit range error rather than silently
 turning a closed scope into an open one; those existing documents remain readable.
 Desktop navigation retains its existing years 2–9998 range.
 
+## Implemented Phase 6 capture profile
+
+No schema version or record shape changed. Phase 6 adds a capture service over the
+Phase 1/4 records. Habit-bound controls write only `hw.checkins`; field-bound
+controls write only `hw.observations`, in the canonical `day_page` for the date
+(created at `Pages/Days/<uuid>.md` when absent). Habit UUIDs never receive
+observations and metric UUIDs never receive check-ins.
+
+Captures are upserts per habit/date or field/date. Repeating the same value is a
+no-op; a correction keeps the record UUID and unknown keys and updates the
+value/state, label snapshot and `recorded_at`; clearing removes the explicit
+record, which then reads as `unrecorded`. Callers send the value they displayed and
+a mismatch with the file is a conflict, not an overwrite. Future dates, unscheduled
+habit dates, pre-activation field dates and weekly-policy fields are rejected
+without writing; existing records in those positions remain untouched. New
+observations carry `source_period_ref` and `source_block_id` provenance. No
+`missed` state is ever inferred.
+
 ## Implemented Phase 4 layout and metric profile
 
 Phase 4 adds runtime support for schema-v4 `metric_definition` Markdown documents

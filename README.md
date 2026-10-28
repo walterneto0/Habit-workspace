@@ -5,10 +5,10 @@ planning data across year, month, ISO-week, and day views. Its design goal is a
 local-first workspace where readable files, not a server account or database, are
 the durable source of truth.
 
-> **Status: pre-alpha.** Phases 0–4 are implemented. The application is useful
-> for exploring the vault, navigation, and domain/file contracts, but it is not
-> a finished habit tracker. Data capture, complete layout editing, charts, and
-> backup/export workflows are incomplete. Use test or disposable data and keep
+> **Status: pre-alpha.** Phases 0–4 and 6 are implemented; Phase 5 is partial.
+> Habits and typed values can be recorded per day, but it is not a finished habit
+> tracker. Complete layout editing, charts, and backup/export workflows are
+> incomplete. Use test or disposable data and keep
 > independent backups.
 
 The initial application interface language is Brazilian Portuguese. Repository
@@ -40,11 +40,15 @@ New metrics require an explicit choice and are saved separately. Capture and cha
 calculations remain unavailable. See [verification and limitations](docs/verification/phase-5.md)
 and [keyboard operations](docs/layout-studio-shortcuts.md).
 
+The same pages have a **tracking mode** (Phase 6): create or edit habits, pick a
+date in the open period, and mark check-ins or enter typed values (for example,
+minutes studied) in the resolved layout without opening the Studio. Values are
+written to the canonical day file. See [Phase 6 verification](docs/verification/phase-6.md).
+
 ## Not implemented yet
 
 - Complete Phase 5 acceptance: comprehensive component properties, specialized
   input shapes, validated pointer drag/drop and native visual review.
-- Habit check-in and general structured-input capture interfaces.
 - Finished task, goal, event, rich-note, and image workflows.
 - Chart rendering and broader analytics/rollups.
 - Self-contained dependency export, integrated backup, and recovery UX.
@@ -117,6 +121,7 @@ QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software .venv/bin/python -m habit_wo
 .venv/bin/python tools/verify_phase1.py
 .venv/bin/python tools/verify_phase2.py
 .venv/bin/python tools/verify_phase3.py
+QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software .venv/bin/python tools/verify_phase6.py
 ```
 
 The pytest suite includes offscreen Qt/QML startup and the Phase 2 input/render
@@ -138,7 +143,7 @@ Never commit vault data, credentials, generated files, or dependency artifacts.
 | 3 — Temporal domain and canonical habit definitions | Complete |
 | 4 — Layout, field, assignment, and observation contracts | Complete |
 | 5 — Visual Layout Studio and renderer | Partial; integrated workflow available |
-| 6 — Habit and structured capture | Pending |
+| 6 — Habit and structured capture | Implemented; awaiting owner review |
 | 7 — Planning, notes, images, and calendar | Pending |
 | 8 — Charts and cross-period rollups | Pending |
 | 9 — Packages, backup, stabilization, and distribution | Pending |

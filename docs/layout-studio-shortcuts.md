@@ -8,4 +8,6 @@ controls; Space activates focused buttons. **Ctrl+Z** undoes and
 **Prévia** shares normal page rendering and does not write data. **Revisar e
 salvar** shows the concrete period, activation and change summary before publishing.
 **Fechar** asks to discard unsaved changes. Navigation and window close are guarded
-while the editor is open. Saving observations is not available in Phase 5.
+while the editor is open. Values are not entered in the Studio: close it and use
+the page's tracking mode, where **Alt+Shift+←/→** changes the selected date and
+Enter saves a focused value field.

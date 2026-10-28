@@ -119,6 +119,16 @@ ApplicationWindow {
         onActivated: window.backend.movePeriod(1)
     }
     Shortcut {
+        sequence: "Alt+Shift+Left"
+        enabled: window.modelState.hasVault && !!window.modelState.period
+        onActivated: window.backend.moveCaptureDate(-1)
+    }
+    Shortcut {
+        sequence: "Alt+Shift+Right"
+        enabled: window.modelState.hasVault && !!window.modelState.period
+        onActivated: window.backend.moveCaptureDate(1)
+    }
+    Shortcut {
         sequence: "Escape"
         enabled: !vaultDialog.visible && !importDialog.visible && !propertiesDrawer.visible
         onActivated: window.backend.clearSelection()
@@ -432,17 +442,33 @@ ApplicationWindow {
                             ColumnLayout {
                                 Layout.fillWidth: true
                                 visible: window.modelState.hasVault && !!window.modelState.period
-                                ActionButton {
-                                    text: qsTr("Abrir Layout Studio")
-                                    objectName: "open-layout-studio"
-                                    onClicked: window.backend.layoutStudio.open()
-                                }
-                                UiText { Layout.fillWidth: true; text: qsTr("Ativo desde: ") + (window.modelState.composition.activation || "") }
-                                UiText { Layout.fillWidth: true; text: (window.modelState.composition.issues || []).join("\n"); color: Theme.warning; visible: text.length > 0 }
-                                LayoutComposition {
+                                spacing: 12
+                                TrackingPanel {
                                     Layout.fillWidth: true
+                                    backend: window.backend
+                                    modelState: window.modelState
+                                }
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    UiText { Layout.fillWidth: true; text: qsTr("Layout ativo desde: ") + (window.modelState.composition.activation || ""); color: Theme.secondary }
+                                    ActionButton {
+                                        text: qsTr("Editar layout no Studio")
+                                        objectName: "open-layout-studio"
+                                        onClicked: window.backend.layoutStudio.open()
+                                    }
+                                }
+                                UiText { Layout.fillWidth: true; text: (window.modelState.composition.issues || []).concat(window.modelState.composition.captureError ? [window.modelState.composition.captureError] : []).join("\n"); color: Theme.warning; visible: text.length > 0 }
+                                LayoutComposition {
+                                    objectName: "tracking-composition"
+                                    Layout.fillWidth: true
+                                    tracking: true
+                                    feedback: (window.modelState.tracking || {}).feedback || ({})
                                     blocks: window.modelState.composition.blocks || []
                                     gridColumns: window.modelState.composition.columns || 1
+                                    onCheckin: (habitId, state, token) => window.backend.setCheckin(habitId, state, token)
+                                    onObserve: (fieldId, blockId, text, token) => window.backend.saveObservation(fieldId, blockId, text, token)
+                                    onObserveBoolean: (fieldId, blockId, value, token) => window.backend.setBooleanObservation(fieldId, blockId, value, token)
+                                    onClearValue: (fieldId, token) => window.backend.clearObservation(fieldId, token)
                                 }
                             }
                             Input {
@@ -571,6 +597,10 @@ ApplicationWindow {
     }
     VaultDialog {
         id: vaultDialog
+        backend: window.backend
+        modelState: window.modelState
+    }
+    HabitDialog {
         backend: window.backend
         modelState: window.modelState
     }

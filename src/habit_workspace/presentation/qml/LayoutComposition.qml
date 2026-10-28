@@ -9,7 +9,14 @@ GridLayout {
     property bool editing: false
     property bool preview: false
     property int selected: -1
+    // Tracking mode: real values for the selected date, entered without the Studio.
+    property bool tracking: false
+    property var feedback: ({})
     signal selectedBlock(int index)
+    signal checkin(string habitId, string state, string token)
+    signal observe(string fieldId, string blockId, string text, string token)
+    signal observeBoolean(string fieldId, string blockId, string value, string token)
+    signal clearValue(string fieldId, string token)
     signal movedBlock(int source, int target)
     signal droppedKind(string kind, int target)
     columns: width < 420 ? 1 : gridColumns
@@ -22,6 +29,8 @@ GridLayout {
             objectName: "layout-card-" + index
             required property int index
             readonly property var modelData: root.blocks[index] || ({config: {}, title: "", type: "", width: 1, row: 0, column: 0})
+            readonly property bool captures: modelData.type === "checklist" || (modelData.type || "").endsWith("_input")
+            readonly property var cells: modelData.capture || []
             Layout.fillWidth: true
             Layout.alignment: Qt.AlignTop
             Layout.columnSpan: Math.min(root.columns, modelData.width)
@@ -95,15 +104,36 @@ GridLayout {
                     onClicked: root.selectedBlock(card.index)
                 }
                 UiText { Layout.fillWidth: true; text: card.modelData.title; font.weight: Font.Medium }
-                UiText { Layout.fillWidth: true; text: card.modelData.bindingLabel || ""; visible: text.length > 0; color: Theme.secondary }
+                UiText { Layout.fillWidth: true; text: card.modelData.bindingLabel || ""; visible: text.length > 0 && !(root.tracking && card.cells.length > 0); color: Theme.secondary }
+                Repeater {
+                    model: root.tracking ? card.cells.length : 0
+                    delegate: CaptureCell {
+                        required property int index
+                        Layout.fillWidth: true
+                        cell: card.cells[index] || ({})
+                        blockId: card.modelData.id || ""
+                        showName: card.cells.length > 1 || (card.cells[index] || {}).name !== card.modelData.title
+                        feedback: root.feedback
+                        onCheckin: (habitId, state, token) => root.checkin(habitId, state, token)
+                        onObserve: (fieldId, blockId, text, token) => root.observe(fieldId, blockId, text, token)
+                        onObserveBoolean: (fieldId, blockId, value, token) => root.observeBoolean(fieldId, blockId, value, token)
+                        onClearValue: (fieldId, token) => root.clearValue(fieldId, token)
+                    }
+                }
+                UiText {
+                    Layout.fillWidth: true
+                    visible: root.tracking && card.captures && card.cells.length === 0
+                    text: card.modelData.type === "checklist" ? qsTr("Checklist sem fonte. Crie um hábito e vincule-o no Layout Studio.") : qsTr("Campo sem definição vinculada.")
+                    color: Theme.secondary
+                }
                 StudioCheckBox {
-                    visible: card.modelData.type === "checklist" || card.modelData.type === "boolean_input"
+                    visible: !root.tracking && (card.modelData.type === "checklist" || card.modelData.type === "boolean_input")
                     enabled: false
-                    text: qsTr("Sem registro · captura na Fase 6")
+                    text: qsTr("Sem registro · preencha no modo de acompanhamento")
                 }
                 Input {
                     Layout.fillWidth: true
-                    visible: ["text_input", "integer_input", "number_input", "date_input", "time_input", "duration_input"].includes(card.modelData.type)
+                    visible: !root.tracking && ["text_input", "integer_input", "number_input", "date_input", "time_input", "duration_input"].includes(card.modelData.type)
                     readOnly: true
                     text: root.preview ? ({text_input:"Texto de exemplo", integer_input:"3", number_input:"3.5", date_input:"2026-10-29", time_input:"09:30", duration_input:"25"}[card.modelData.type] || "") : ""
                     placeholderText: card.modelData.config.placeholder || ({date_input:"AAAA-MM-DD", time_input:"HH:MM", duration_input:"Duração", integer_input:"Inteiro", number_input:"Número", text_input:"Texto"}[card.modelData.type] || "") + qsTr(" · sem registro")
@@ -111,14 +141,14 @@ GridLayout {
                 }
                 StudioChoice {
                     Layout.fillWidth: true
-                    visible: card.modelData.type === "selection_input"
+                    visible: !root.tracking && card.modelData.type === "selection_input"
                     enabled: false
                     label: card.modelData.title
                     model: root.preview ? [qsTr("Exemplo fictício")].concat(card.modelData.options || []) : [qsTr("Sem registro")].concat(card.modelData.options || [])
                 }
                 Slider {
                     Layout.fillWidth: true
-                    visible: card.modelData.type === "rating_input"
+                    visible: !root.tracking && card.modelData.type === "rating_input"
                     enabled: false
                     from: card.modelData.minimum === undefined ? 1 : card.modelData.minimum
                     to: card.modelData.maximum === undefined ? 5 : card.modelData.maximum
@@ -128,12 +158,13 @@ GridLayout {
                 UiText {
                     Layout.fillWidth: true
                     visible: !!card.modelData.config.required
-                    text: qsTr("Obrigatório quando a captura estiver disponível")
+                    text: qsTr("Obrigatório · sem registro não é falha automática")
                     color: Theme.secondary
                 }
                 UiText {
                     Layout.fillWidth: true
-                    text: card.modelData.imageSource ? (card.modelData.config.alt || "") : card.modelData.detail || ({note: qsTr("Nota sem conteúdo vinculado. Edição na Fase 7."), list: qsTr("Lista vazia · captura na Fase 7."), table: qsTr("Tabela sem colunas configuradas."), chart: qsTr("Nenhuma fonte selecionada."), image: qsTr("Imagem indisponível. Importação de mídia na Fase 7."), section: qsTr("Seção")}[card.modelData.type] || qsTr("Captura de valores disponível na Fase 6."))
+                    visible: !(root.tracking && card.captures)
+                    text: card.modelData.imageSource ? (card.modelData.config.alt || "") : card.modelData.detail || ({note: qsTr("Nota sem conteúdo vinculado. Edição na Fase 7."), list: qsTr("Lista vazia · captura na Fase 7."), table: qsTr("Tabela sem colunas configuradas."), chart: qsTr("Nenhuma fonte selecionada."), image: qsTr("Imagem indisponível. Importação de mídia na Fase 7."), section: qsTr("Seção")}[card.modelData.type] || qsTr("Valores são preenchidos no modo de acompanhamento da página."))
                     textFormat: Text.PlainText
                     color: Theme.secondary
                 }
@@ -178,6 +209,12 @@ GridLayout {
                         item.blocks = Qt.binding(() => card.modelData.children || []);
                         item.gridColumns = Qt.binding(() => card.modelData.config.columns || 1);
                         item.preview = Qt.binding(() => root.preview);
+                        item.tracking = Qt.binding(() => root.tracking);
+                        item.feedback = Qt.binding(() => root.feedback);
+                        item.checkin.connect(root.checkin);
+                        item.observe.connect(root.observe);
+                        item.observeBoolean.connect(root.observeBoolean);
+                        item.clearValue.connect(root.clearValue);
                     }
                 }
             }
