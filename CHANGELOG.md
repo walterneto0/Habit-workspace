@@ -11,5 +11,7 @@ artifacts.
   assignments/defaults, rebuildable SQLite indexing, and validation tests.
 - Added repository contribution and security guidance, issue/PR templates,
   dependency update configuration, and least-privilege CI.
+- Licensed original project source under PolyForm Noncommercial 1.0.0; third-party
+  dependency terms remain separate.
 - Layout Studio UI, structured capture interfaces, chart rendering, and
   distribution workflows remain unimplemented.

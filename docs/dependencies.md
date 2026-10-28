@@ -29,8 +29,8 @@ The full PySide6 distribution brings additional modules; its installation does
 not mean those modules are part of the application design.
 
 No fonts or proprietary icon assets are bundled. The system supplies sans-serif.
-No application license has been selected. Habit Workspace source and
-third-party dependency licenses are separate; see
+Habit Workspace's original source code uses PolyForm Noncommercial 1.0.0.
+Third-party dependency licenses remain separate; see
 [`licensing-review.md`](licensing-review.md).
 
 Before distributing an application or dependency bundle, audit the exact Qt

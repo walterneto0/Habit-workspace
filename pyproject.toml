@@ -7,7 +7,8 @@ name = "habit-workspace"
 version = "0.0.1"
 description = "Offline, file-first personal planning desktop application"
 readme = "README.md"
-# License metadata remains unset pending explicit maintainer approval.
+license = "PolyForm-Noncommercial-1.0.0"
+license-files = ["LICENSE"]
 requires-python = ">=3.14,<3.15"
 keywords = ["habit-tracking", "personal-planning", "local-first", "file-first", "desktop"]
 classifiers = [
@@ -18,7 +19,14 @@ classifiers = [
     "Topic :: Office/Business",
 ]
 dependencies = ["PySide6>=6.10,<7", "ruamel.yaml>=0.18.6,<0.19"]
-# Add project URLs after the public repository has been created.
+
+[project.urls]
+Homepage = "https://github.com/walterneto0/habit-workspace"
+Repository = "https://github.com/walterneto0/habit-workspace"
+Documentation = "https://github.com/walterneto0/habit-workspace#readme"
+Issues = "https://github.com/walterneto0/habit-workspace/issues"
+Changelog = "https://github.com/walterneto0/habit-workspace/blob/main/CHANGELOG.md"
+Security = "https://github.com/walterneto0/habit-workspace/security"
 
 [project.optional-dependencies]
 dev = ["pytest>=8,<10", "ruff>=0.11,<1"]

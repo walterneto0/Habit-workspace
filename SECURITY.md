@@ -7,10 +7,11 @@ application.
 ## Reporting a vulnerability
 
 Please do not report exploitable vulnerabilities in public issues or pull
-requests. Once GitHub repository security reporting is enabled, use **Report a
-vulnerability** in the repository's Security tab. Until that channel is
-configured, contact the maintainers privately through the repository owner;
-do not include vault contents or credentials in the initial report.
+requests. Use **Report a vulnerability** in the
+[repository's Security tab](https://github.com/walterneto0/habit-workspace/security/advisories/new)
+when private vulnerability reporting is enabled. If it is unavailable, contact
+the repository owner privately; do not include vault contents or credentials
+in the initial report.
 
 Include the affected version or commit, platform, impact, and a minimal
 reproduction using synthetic data. Allow maintainers reasonable time to

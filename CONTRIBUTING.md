@@ -57,17 +57,24 @@ tests alone.
 
 ## Licensing and provenance
 
-The project license is pending maintainer approval; see
-[the licensing review](docs/licensing-review.md). Until a license is selected
-and added, please contact the maintainer before submitting code intended for
-incorporation. No Contributor License Agreement (CLA) is currently in place.
-Contributors retain copyright in their work; do not submit material you cannot
-legally contribute. Include attribution and license information for any
-third-party material.
+Habit Workspace's original source code is licensed under the
+[PolyForm Noncommercial License 1.0.0](LICENSE). The project is
+source-available, not OSI-approved open-source software. Contributions that are
+accepted and distributed as part of the project are made available under those
+terms for permitted noncommercial purposes.
+
+Contributors retain copyright in their contributions; submission does not
+assign ownership to the maintainer. By submitting a contribution for inclusion,
+you confirm you have the right to contribute it and authorize its distribution
+as part of Habit Workspace under the project license. This does not grant
+commercial-use rights or authorize separate commercial sublicensing of your
+contribution. No CLA or copyright-assignment process is currently in place.
+Include attribution and license information for third-party material, and do
+not submit work you cannot legally contribute.
 
 If a future commercial or dual-licensing model is considered, contributor
-permissions will need to be addressed explicitly before relying on contributed
-work for that purpose.
+permissions will need to be addressed explicitly with relevant copyright
+holders before relying on contributed work for that purpose.
 
 ## Pull requests
 

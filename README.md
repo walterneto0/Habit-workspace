@@ -151,15 +151,15 @@ vault data in an issue, pull request, test fixture, screenshot, or log.
 ## Source availability and licensing
 
 This repository is **source-available**, not OSI-approved open-source software.
-No project license has been selected or added yet. Public visibility alone does
-not grant permission to use, modify, or redistribute Habit Workspace; until a
-license is approved and included, assume all rights are reserved.
+The project's original source code is licensed under the
+[PolyForm Noncommercial License 1.0.0](LICENSE).
 
-The maintainer is evaluating the PolyForm Noncommercial License 1.0.0 as a
-possible future license. It has **not** been adopted, and no noncommercial
-permission is granted by this README. See the
-[licensing review](docs/licensing-review.md) for the evaluation and outstanding
-decisions. Third-party dependencies retain their own licenses; see
+The license permits use, study, modification, and redistribution for permitted
+noncommercial purposes, subject to its complete terms. Commercial use requires
+separate authorization from the relevant copyright holder(s). This is not an
+OSI-approved license or unrestricted open source. Third-party dependencies
+retain their own licenses and notices; see
 [dependency licensing notes](docs/dependencies.md).
 
-Do not publish packages or represent this project as unrestricted open source.
+See the [licensing notes](docs/licensing-review.md) for contributor copyright,
+dependency, and future commercial licensing considerations.
