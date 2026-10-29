@@ -108,3 +108,20 @@ def test_studio_ux_journey_and_canonical_reopen():
     assert '"result": "PASS"' in result.stdout
     assert '"qmlWarnings": []' in result.stdout
     assert not result.stderr, result.stderr
+
+
+def test_phase65a_rollover_and_historical_label_in_qml():
+    from pathlib import Path
+
+    script = Path(__file__).resolve().parents[1] / "tools/verify_phase65a.py"
+    result = subprocess.run(
+        [sys.executable, str(script)],
+        env={**os.environ, "QT_QPA_PLATFORM": "offscreen", "QT_QUICK_BACKEND": "software"},
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert '"result": "PASS"' in result.stdout
+    assert '"qmlWarnings": []' in result.stdout
+    assert "pointer check-in written to the new day" in result.stdout

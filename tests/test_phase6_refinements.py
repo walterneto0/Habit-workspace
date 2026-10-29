@@ -4,7 +4,7 @@ from datetime import date
 from uuid import uuid4
 
 import pytest
-from test_tracking import FrozenDatetime, cells, controller, save_studio
+from test_tracking import cells, controller, save_studio
 from test_vault import note
 
 from habit_workspace.application.capture import CaptureSnapshot
@@ -18,11 +18,7 @@ DAY = date(2026, 10, 29)
 
 
 @pytest.fixture
-def workspace(tmp_path, monkeypatch):
-    from habit_workspace.presentation import controllers, layout_studio
-
-    monkeypatch.setattr(controllers, "datetime", FrozenDatetime)
-    monkeypatch.setattr(layout_studio, "datetime", FrozenDatetime)
+def workspace(tmp_path):
     desktop = controller(tmp_path)
     desktop.createVault(str(tmp_path / "vault"), "Refinamentos")
     desktop.navigate("day", DAY.isoformat())

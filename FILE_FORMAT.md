@@ -50,6 +50,11 @@ fields are preserved (opening never rewrites it). Cache paths are relative to th
 vault. `.habit-workspace/backups/` holds exact pre-save recovery copies; `.habit-workspace/write.lock/`
 serializes application writers. A leftover lock is reported for explicit recovery,
 never automatically stolen. Internal files are excluded from document discovery.
+Since 6.5A the lock directory contains a diagnostic, non-canonical
+`owner.json` (`app`, random `token`, `pid`, `host`, Linux `boot_id` and process
+start time, `created_at`). It only feeds `vault lock-status` and the conservative
+`vault unlock --token` recovery; it never releases a lock by age, presence or PID
+alone. Older locks without it remain valid locks with an unidentified owner.
 Notes default to `Notes/`; standalone imports use `Imports/<UUID>.md`. Neither
 location determines identity. Plain Markdown requires an explicit wrap-as-note
 import option; its complete original text becomes the note body.

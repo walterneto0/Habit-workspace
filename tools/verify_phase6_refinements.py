@@ -20,7 +20,7 @@ from verify_phase6 import load, records
 
 from habit_workspace.application.vault import VaultSession
 from habit_workspace.domain.documents import Document
-from habit_workspace.presentation import controllers, layout_studio
+from habit_workspace.presentation import controllers
 
 DAY = date(2026, 10, 29)
 OUTPUT = Path("/tmp/habit-workspace-phase6-refinements")
@@ -36,7 +36,14 @@ class FrozenDatetime(datetime):
         return value if tz is None else value.astimezone(tz)
 
 
-controllers.datetime = layout_studio.datetime = FrozenDatetime
+class FrozenClock:
+    """Injected controller clock: civil DAY with FrozenDatetime instants."""
+
+    def now(self):
+        return FrozenDatetime.now().astimezone()
+
+    def today(self):
+        return DAY
 
 
 class Interface:
@@ -119,7 +126,7 @@ def verify(reopen=None):
     with TemporaryDirectory() as temporary:
         base = Path(temporary)
         controller = controllers.WorkspaceController(
-            settings=QSettings(str(base / "prefs"), QSettings.IniFormat), today=DAY
+            settings=QSettings(str(base / "prefs"), QSettings.IniFormat), clock=FrozenClock()
         )
         ui = Interface(app, controller)
         if reopen:

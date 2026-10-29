@@ -141,3 +141,26 @@ include archived definitions rather than silently modifying their validity.
 Phase 4 adds versioned layout assignments, metric definitions, canonical
 observations and file-derived source queries. Visual Layout Studio, habit capture
 UI and chart rendering/rollups remain in later roadmap phases.
+
+## Fase 6.5A — estabilidade (sem novo esquema ou dependência)
+
+- **Relógio**: `presentation/clock.py` injeta `today`/`now` (`SystemClock`,
+  `ManualClock` para testes). O controller verifica a data civil local a cada 30 s
+  e antes de cada captura (`refreshDate`): estados pendente/passado/futuro são
+  recalculados sem revarrer o cofre; a navegação acompanha apenas quem estava no
+  "hoje" anterior, sem data de captura explícita nem formulário/rascunho aberto. Um
+  clique logo após retomar da suspensão grava no dia exibido, nunca em outro.
+- **Layout no acompanhamento**: sempre o layout atual do período (resolvido no
+  instante atual); `tracking.layout_notice` apenas rotula quando outra revisão
+  vigorava na data selecionada. Ver `LAYOUT_ENGINE.md`.
+- **Varredura**: cada scan continua lendo e calculando o SHA-256 de todos os
+  arquivos; documentos com bytes idênticos reutilizam o parse anterior
+  (cache limitado, verificado por bytes e por assinatura de mutação). Documentos de
+  um `ScanReport` são somente leitura; escritores fazem `deepcopy`.
+  `VaultSession.scan` reconstrói o SQLite só quando o snapshot muda, o índice falta,
+  falhou antes ou `request_index_rebuild()` foi pedido (reindexação manual). O
+  watcher só emite `refreshed` para snapshots diferentes (ou reindexação).
+- **Escritores**: `writer_lock` grava `owner.json`; `inspect_lock`/`recover_lock`
+  diagnosticam e só removem um bloqueio comprovadamente órfão (mesma máquina/boot,
+  processo inexistente ou PID reutilizado, conteúdo esperado e token confirmado).
+  Varredura e captura continuam síncronas na thread da GUI; ver o relatório 6.5A.

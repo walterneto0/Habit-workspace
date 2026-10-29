@@ -49,6 +49,17 @@ Implementada e verificada por testes automatizados: [relatório da Fase 6](docs/
 Modo de acompanhamento, formulário de hábitos e captura tipada disponíveis; revisão
 visual/acessibilidade humana pendente; aguarda revisão do responsável.
 
+## Versão 6.5 — ponte entre o núcleo e a Fase 7
+
+Direção: [phase-6-5-direction.md](docs/planning/phase-6-5-direction.md).
+
+- **6.5A — Estabilidade e integridade**: implementada e verificada por testes
+  automatizados; aguarda revisão do responsável
+  ([relatório 6.5A](docs/verification/phase-6-5a-stability.md)). Virada do dia,
+  política de layout histórico, medição/correção de desempenho de varredura e
+  diagnóstico/recuperação segura de bloqueios.
+- **6.5B — Integração e usabilidade**: não iniciada. A versão 6.5 não está completa.
+
 ## Fase 7 — Agenda, notas, imagens e planejamento
 Tarefas, objetivos, avaliações, eventos e notas; bloco de texto Markdown com marcador por ID, imagens em Assets; agenda referenciando dados canônicos.
 Aceite: exportar/importar itens com dependências, preservar notas/imagens e abrir em outro cofre.

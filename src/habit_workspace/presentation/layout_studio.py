@@ -1,7 +1,6 @@
 """Qt editor adapter. Only trusted component mappings reach bundled QML."""
 
 from dataclasses import asdict, replace
-from datetime import datetime
 from uuid import UUID, uuid4
 
 from PySide6.QtCore import Property, QObject, QRunnable, QThreadPool, Signal, Slot
@@ -299,12 +298,12 @@ class LayoutStudio(QObject):
                 history = (
                     defaults[0].history(self.period.scale) if defaults else AssignmentHistory()
                 )
-                active = history.at(datetime.now().astimezone())
+                active = history.at(self.workspace.clock.now())
                 if active:
                     unique_layout(self.report, active.layout_id, active.version)
                 result = resolve_layout(
                     self.period,
-                    datetime.now().astimezone(),
+                    self.workspace.clock.now(),
                     AssignmentHistory(),
                     history,
                     tuple(d.layout for d in self.report.layouts),
@@ -340,7 +339,7 @@ class LayoutStudio(QObject):
             self.report = self.workspace.session.report
             self.period = self.workspace.navigation.period_ref
             result = LayoutService.resolve_report(
-                self.report, self.period, datetime.now().astimezone()
+                self.report, self.period, self.workspace.clock.now()
             )
             self.original = (
                 unique_layout(self.report, result.layout.id, result.layout.version)
@@ -418,7 +417,7 @@ class LayoutStudio(QObject):
                         uuid4(),
                         name,
                         value_type,
-                        datetime.now().astimezone(),
+                        self.workspace.clock.now(),
                         tags=tuple(t.strip() for t in tags.split(",") if t.strip()),
                         unit=options.get("unit") or None,
                         minimum=float(options["minimum"]) if options.get("minimum") else None,
@@ -738,7 +737,7 @@ class LayoutStudio(QObject):
     def prepare(self):
         if self.draft and not self.busy:
             if self.instant is None:
-                self.instant = datetime.now().astimezone()
+                self.instant = self.workspace.clock.now()
             self.changed.emit()
 
     @Slot()

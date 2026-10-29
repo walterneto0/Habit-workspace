@@ -1,9 +1,11 @@
 """Tracking-mode view data: QML receives plain mappings, never domain objects."""
 
 import json
-from datetime import date
+from datetime import date, datetime, time, timedelta
 
 from habit_workspace.application.capture import FieldCell, HabitCell
+from habit_workspace.application.layouts import LayoutService
+from habit_workspace.domain.layouts import LayoutResolution
 from habit_workspace.domain.temporal import PeriodRef
 from habit_workspace.presentation.navigation import WEEKDAYS, long_date
 
@@ -93,6 +95,49 @@ def date_state(period: PeriodRef, day: date, today: date) -> dict:
         canNext=day < period.end,
         fixed=period.start == period.end,
     )
+
+
+def instant_label(value: datetime) -> str:
+    return value.astimezone().strftime("%d/%m/%Y às %H:%M")
+
+
+def layout_notice(report, period: PeriodRef, day: date, today: date, current: LayoutResolution):
+    """Label, never change, which layout revision tracking shows for ``day``.
+
+    Tracking shows the period's *current* layout (resolved at the present instant);
+    capture still targets ``day`` and refuses pre-activation values. When another
+    revision was (or will be) in force at the end of that local day, say so instead of
+    implying the current layout is "the layout of that day". Pure: no I/O, no writes.
+    """
+    start = datetime.combine(day, time()).astimezone()
+    end = datetime.combine(day + timedelta(days=1), time()).astimezone() - timedelta(microseconds=1)
+    try:
+        then = LayoutService.resolve_report(report, period, end)
+    except ValueError, OSError:
+        return (
+            "Exibindo o layout atual. Não foi possível identificar a revisão de "
+            + long_date(day)
+            + "."
+        )
+    if (then.layout.id, then.layout.version) != (current.layout.id, current.layout.version):
+        name = (
+            "o layout básico"
+            if then.origin == "builtin"
+            else f"“{then.layout.name}” · versão {then.layout.version}"
+        )
+        verb = "será" if day > today else "era"
+        return (
+            f"Exibindo o layout atual do período. Em {long_date(day)} a revisão vigente "
+            f"{verb} {name}. Registros desse dia são preservados; campos criados depois "
+            "não aceitam valores anteriores à ativação nem contam como falha."
+        )
+    effective = current.assignment.effective_at if current.assignment else None
+    if effective is not None and start < effective <= end:
+        return (
+            f"Este layout passou a valer durante este dia, às {effective.astimezone():%H:%M}. "
+            "Campos novos desta revisão não contam como falha antes desse momento."
+        )
+    return ""
 
 
 def habit_properties(habit) -> dict:

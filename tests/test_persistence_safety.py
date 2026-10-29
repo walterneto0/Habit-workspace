@@ -9,7 +9,7 @@ from habit_workspace.application.imports import ImportService
 from habit_workspace.application.vault import VaultSession
 from habit_workspace.domain.documents import DocumentError
 from habit_workspace.vault import atomic_io
-from habit_workspace.vault.atomic_io import ConflictError, writer_lock
+from habit_workspace.vault.atomic_io import ConflictError, LockedError, writer_lock
 from habit_workspace.vault.format import decode, encode
 
 
@@ -112,7 +112,7 @@ def test_corrupt_cache_and_copied_vault_rebuild(session, tmp_path):
 
 def test_application_lock_and_duplicate_save_are_not_silent(session):
     loaded = session.create_document("Notes/one.md", note())
-    with writer_lock(session.root), pytest.raises(ConflictError, match="locked"):
+    with writer_lock(session.root), pytest.raises(LockedError, match="write.lock"):
         session.save(loaded, loaded.document)
     (session.root / "duplicate.md").write_bytes(loaded.path.read_bytes())
     assert session.scan().conflicts[0].identical

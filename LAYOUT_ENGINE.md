@@ -129,3 +129,24 @@ de ordem/colunas, novos campos e instante local de ativação. Abrir, selecionar
 modelo e visualizar a prévia não gravam documentos. Captura continua exclusivamente
 na página normal, depois de salvar ou sair do Studio. Referências e dados históricos
 sobrevivem a remoção, mudança de largura e reorganização.
+
+## Política temporal no acompanhamento (6.5A)
+
+Conceitos distintos: `PeriodRef` selecionado (página), data da ocorrência
+selecionada (`capture_day`), instante atual (`now`) e instante de ativação de cada
+revisão (`effective_at`).
+
+- O modo de acompanhamento renderiza **o layout atual do período**:
+  `resolve(period, now)`. Ele não troca de layout ao escolher outro dia da semana.
+- Quando, no fim do dia local selecionado, vigorava (ou vigorará) outra revisão, a
+  página mostra um aviso: “Exibindo o layout atual do período. Em <data> a revisão
+  vigente era …”. Se a revisão atual começou durante aquele dia, o aviso informa o
+  horário. Nenhum aviso aparece quando a revisão é a mesma.
+- A captura continua gravando somente na data selecionada e recusando valores
+  anteriores à ativação do campo; ausência nunca vira falha. Ler, navegar ou
+  rotular nunca grava páginas, atribuições ou definições.
+- O Layout Studio aberto a partir de um dia passado edita a revisão **atual**, com
+  ativação no instante do salvamento; nunca altera atribuições históricas.
+- Adiado (6.5B ou posterior): visualização somente leitura de uma revisão
+  histórica, claramente rotulada. O resolver já suporta `resolve(period, instante)`,
+  mas a interface não foi criada nesta fase.
