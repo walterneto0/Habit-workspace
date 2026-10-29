@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import "StudioLabels.js" as Labels
 
 GridLayout {
     id: root
@@ -78,6 +79,8 @@ GridLayout {
                 anchors.fill: parent
                 anchors.margins: 16
                 spacing: 12
+                RowLayout {
+                Layout.fillWidth: true
                 ActionButton {
                     id: handle
                     objectName: "layout-handle-" + card.index
@@ -99,11 +102,16 @@ GridLayout {
                         onReleased: { dragProxy.Drag.drop(); dragProxy.x = 0; dragProxy.y = 0; }
                         onClicked: handle.clicked()
                     }
-                    Layout.fillWidth: true
-                    text: qsTr("Selecionar · ") + card.modelData.title
+                    Layout.preferredWidth: 36
+                    quiet: true
+                    compact: true
+                    glyph: "drag"
+                    hint: qsTr("Arrastar ou selecionar: ") + card.modelData.title
                     onClicked: root.selectedBlock(card.index)
                 }
                 UiText { Layout.fillWidth: true; text: card.modelData.title; font.weight: Font.Medium }
+                ActionButton { visible: root.editing; quiet: true; text: qsTr("Editar"); hint: qsTr("Configurar: ") + card.modelData.title; onClicked: root.selectedBlock(card.index) }
+                }
                 UiText { Layout.fillWidth: true; text: card.modelData.bindingLabel || ""; visible: text.length > 0 && !(root.tracking && card.cells.length > 0); color: Theme.secondary }
                 UiText {
                     Layout.fillWidth: true
@@ -134,6 +142,8 @@ GridLayout {
                     color: Theme.secondary
                 }
                 StudioCheckBox {
+                    Layout.fillWidth: true
+                    implicitWidth: 0
                     visible: !root.tracking && (card.modelData.type === "checklist" || card.modelData.type === "boolean_input")
                     enabled: false
                     text: qsTr("Sem registro · preencha no modo de acompanhamento")
@@ -187,7 +197,7 @@ GridLayout {
                             height: 66
                             color: Theme.canvas
                             radius: 6
-                            UiText { anchors.fill: parent; anchors.margins: 8; text: modelData.label + "\n" + modelData.value_type; color: Theme.secondary }
+                            UiText { anchors.fill: parent; anchors.margins: 8; text: modelData.label + "\n" + Labels.label(modelData.value_type); color: Theme.secondary }
                         }
                     }
                 }
@@ -206,7 +216,7 @@ GridLayout {
                     implicitHeight: 96
                     color: Theme.canvas
                     radius: 6
-                    UiText { anchors.fill: parent; anchors.margins: 12; text: qsTr("Prévia de configuração — sem resultados calculados\n") + (card.modelData.config.aggregation || "") + " · " + (card.modelData.config.period || qsTr("período da página")); color: Theme.muted }
+                    UiText { anchors.fill: parent; anchors.margins: 12; text: qsTr("Gráfico · resultados disponíveis na Fase 8\n") + Labels.label(card.modelData.config.aggregation || "") + " · " + (card.modelData.config.period || qsTr("período da página")); color: Theme.muted }
                 }
                 Loader {
                     Layout.fillWidth: true
@@ -238,7 +248,7 @@ GridLayout {
         color: appendDrop.containsDrag ? Theme.accentSurface : Theme.canvas
         border.color: appendDrop.containsDrag ? Theme.accent : Theme.border
         radius: 6
-        UiText { anchors.fill: parent; anchors.margins: 12; text: appendDrop.containsDrag ? qsTr("Soltar no final · encaixe na grade; ajuste a largura em Propriedades") : qsTr("Arraste um componente aqui ou use os botões da biblioteca."); color: Theme.secondary }
+        UiText { anchors.fill: parent; anchors.margins: 12; text: appendDrop.containsDrag ? qsTr("Soltar no final · encaixe na grade; ajuste a largura em Propriedades") : qsTr("Solte um bloco aqui para movê-lo ao final. Você também pode usar Adicionar bloco e os botões de mover."); color: Theme.secondary }
         DropArea {
             id: appendDrop
             objectName: "layout-append-drop"

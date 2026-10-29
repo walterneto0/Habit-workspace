@@ -194,6 +194,7 @@ def verify():
         checks.append("specialized selection configuration through dialog")
         click("palette-number_input")
         type_text("metric-name", "Minutes")
+        click("metric-advanced")
         type_text("metric-minimum", "0.5")
         type_text("metric-maximum", "100")
         click("metric-create")
@@ -208,6 +209,7 @@ def verify():
         assert studio.draft.layout.blocks[-1].config.columns[0].label == "Duration"
         checks.append("table add, rename, reorder and remove columns through controls")
         click("palette-chart")
+        click("studio-advanced")
         click("chart-type-number")
         choose("chart-aggregation", 2)
         choose("chart-visualization", 1)

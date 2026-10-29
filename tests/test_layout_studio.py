@@ -312,3 +312,95 @@ def test_missing_chart_and_table_references_are_disclosed(studio):
     rows = composition(layout, studio.workspace.session.report)
     assert all("Referências ausentes" in row["detail"] for row in rows)
     assert "Snapshot" in rows[1]["detail"]
+
+
+def test_starting_points_are_undoable_and_preserve_assignments(studio):
+    from habit_workspace.domain.layouts import Component, NoteConfig
+
+    service = LayoutService(studio.workspace.session)
+    template = LayoutTemplate(
+        uuid4(), 1, "Minha rotina", (Component(uuid4(), "note", "Reflexão", NoteConfig()),)
+    )
+    service.save_template(template)
+    service.set_default("week", Assignment(template.id, 1, datetime(2026, 1, 1).astimezone()))
+    studio.open()
+    original = studio.draft.layout
+    studio.startFrom("empty")
+    assert not studio.draft.layout.blocks
+    assert not studio.workspace.session.report.documents
+    studio.command("undo")
+    assert studio.draft.layout == original
+    studio.startFrom("default")
+    assert studio.draft.layout.blocks == template.blocks
+    studio.startFrom(f"{template.id}:1")
+    assert studio.draft.layout.blocks == template.blocks
+    studio.add("integer_input", "", "Minutos", "")
+    save(studio)
+    assert (
+        service.resolve(PeriodRef("week/2026-W45"), datetime.now().astimezone()).layout == template
+    )
+    assert unique_template_bytes(studio, template) == template
+    studio.open()
+    before = studio.draft.layout
+    studio.startFrom("invalid")
+    assert studio.message and studio.draft.layout == before
+    studio.startFrom("empty")
+    studio.startFrom("current")
+    assert studio.draft.layout == before
+
+
+def unique_template_bytes(studio, template):
+    from habit_workspace.application.layouts import unique_layout
+
+    return unique_layout(studio.workspace.session.report, template.id, 1).layout
+
+
+def test_summary_names_reordering_and_new_sources(studio):
+    studio.open()
+    studio.startFrom("empty")
+    studio.add("checklist", "", "", "")
+    studio.add("integer_input", "", "Minutos", "")
+    save(studio)
+    studio.open()
+    studio.move(1, 0)
+    studio.prepare()
+    assert "Ordem alterada" in studio.state["summary"]
+    assert "Semana 44" in studio.state["periodLabel"]
+    assert "Minutos" in studio.state["summary"]
+    assert "Novos campos: nenhum" in studio.state["summary"]
+    studio.add("duration_input", "", "Estudo", "")
+    assert "Novos campos: Estudo" in studio.state["summary"]
+    assert "registros históricos" in studio.state["summary"]
+
+
+def test_existing_source_uses_name_without_creating_definition(studio):
+    from habit_workspace.application.metrics import MetricService
+    from habit_workspace.domain.metrics import FieldDefinition
+
+    field = FieldDefinition(uuid4(), "Tempo de leitura", "integer", datetime.now().astimezone())
+    MetricService(studio.workspace.session).create(field)
+    studio.open()
+    studio.addConfigured("number_input", str(field.id), "", "", {})
+    block = studio.draft.layout.blocks[-1]
+    assert block.title == field.name
+    assert block.binding.source_id == field.id
+    assert not studio.fields
+    before = studio.draft.layout
+    studio.addConfigured("duration_input", str(field.id), "", "", {})
+    assert studio.message and studio.draft.layout == before
+    assert not studio.fields
+
+
+def test_note_cannot_be_used_as_text_metric(studio):
+    from habit_workspace.domain.documents import Document
+
+    note = Document.from_metadata(
+        {"hw": {"schema_version": 4, "kind": "note", "id": str(uuid4()), "title": "Nota"}},
+        "Conteúdo preservado.",
+    )
+    studio.workspace.session.create_document("Notes/note.md", note)
+    studio.open()
+    before = studio.draft.layout
+    studio.addConfigured("text_input", str(note.id), "", "", {})
+    assert studio.message and studio.draft.layout == before
+    assert not studio.fields

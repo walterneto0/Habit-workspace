@@ -11,6 +11,7 @@ from habit_workspace.application.layouts import LayoutService, unique_layout
 from habit_workspace.application.vault import VaultSession
 from habit_workspace.domain.layouts import (
     REGISTRY,
+    AssignmentHistory,
     Binding,
     ChartConfig,
     ChecklistConfig,
@@ -23,9 +24,37 @@ from habit_workspace.domain.layouts import (
     SectionConfig,
     TableColumn,
     TableConfig,
+    builtin,
+    resolve_layout,
 )
 from habit_workspace.domain.metrics import FieldDefinition, SourceSelection, field_from_mapping
 from habit_workspace.vault.layouts import component_mapping, layout_references
+
+BLOCK_LABELS = {
+    "checklist": "Hábitos",
+    "list": "Lista geral",
+    "table": "Tabela",
+    "note": "Nota",
+    "image": "Imagem",
+    "section": "Seção",
+    "chart": "Gráfico",
+    "integer_input": "Número inteiro",
+    "number_input": "Número decimal",
+    "duration_input": "Duração",
+    "text_input": "Texto",
+    "boolean_input": "Sim/Não",
+    "date_input": "Data",
+    "time_input": "Horário",
+    "selection_input": "Escolha única",
+    "rating_input": "Avaliação",
+}
+
+BUILTIN_NOTE_IDS = {builtin(scale).blocks[0].id for scale in ("year", "month", "week", "day")}
+
+
+def block_title(block):
+    """Localize built-in copy without changing user-written titles or files."""
+    return "Notas" if block.title == "Notes" and block.id in BUILTIN_NOTE_IDS else block.title
 
 
 class JobSignals(QObject):
@@ -65,6 +94,8 @@ def composition(layout, report, root=None, draft_fields=None, capture=None):
     documents = {str(d.document.id): d.document for d in report.documents}
     for block, position in zip(layout.blocks, layout.positions(), strict=True):
         row = component_mapping(block)
+        row["typeLabel"] = BLOCK_LABELS.get(block.type, block.type)
+        row["title"] = block_title(block)
         row.update(row=position.row, column=position.column, detail="", bindingLabel="")
         if capture is not None:
             from habit_workspace.presentation.tracking import cell_mapping
@@ -104,7 +135,10 @@ def composition(layout, report, root=None, draft_fields=None, capture=None):
                 else "Tags dinâmicas (qualquer): " + ", ".join(selection.tags)
             )
         if block.type == "table":
-            row["detail"] = " | ".join(c.label + " · " + c.value_type for c in block.config.columns)
+            row["detail"] = " | ".join(
+                c.label + " · " + BLOCK_LABELS[c.value_type + "_input"]
+                for c in block.config.columns
+            )
         references = []
         if selection and selection.mode == "manual":
             references.extend(selection.source_ids)
@@ -158,6 +192,18 @@ class LayoutStudio(QObject):
         current = blocks[self.selected] if 0 <= self.selected < len(blocks) else {}
         source_id = current.get("binding", {}).get("source_id")
         field = self.source_field(source_id) if source_id else None
+        added = [block_title(b) for b in layout.walk() if b.id not in old]
+        removed = [block_title(b) for b in self.draft.original.walk() if b.id not in new]
+        modified = [block_title(b) for b in layout.walk() if b.id in old and b != old[b.id]]
+        reordered = [k for k in new if k in old] != [k for k in old if k in new]
+        activation = (
+            self.instant.strftime("%d/%m/%Y às %H:%M:%S %z")
+            if self.instant
+            else "revisar salvamento"
+        )
+        period_label = self.workspace.navigation.title
+        if self.period.scale == "week":
+            period_label += f" · {self.period.start:%d/%m} a {self.period.end:%d/%m}"
         return dict(
             field=asdict(field)
             | {
@@ -180,6 +226,14 @@ class LayoutStudio(QObject):
             undo=bool(self.draft.past),
             redo=bool(self.draft.future),
             period=str(self.period),
+            periodLabel=period_label,
+            templates=[
+                {
+                    "key": f"{d.layout.id}:{d.layout.version}",
+                    "name": f"{d.layout.name} · versão {d.layout.version}",
+                }
+                for d in self.report.layouts
+            ],
             message=self.message,
             palette=list(REGISTRY.kinds),
             habitTags=sorted(
@@ -209,15 +263,74 @@ class LayoutStudio(QObject):
                 )
                 for f in self.fields.values()
             ],
-            summary=f"{len(new.keys() - old.keys())} adicionados · "
-            f"{len(old.keys() - new.keys())} removidos · "
-            f"{sum(new[k] != old[k] for k in new.keys() & old.keys())} modificados. "
-            f"Novos campos: {', '.join(fields) or 'nenhum'}. "
-            f"Período: {self.period}. Ativo desde: "
-            f"{self.instant.isoformat() if self.instant else 'preparar salvamento'}. "
-            "Remover blocos preserva dados. Novos campos participam de consultas dinâmicas "
-            "compatíveis a partir da ativação; seleções manuais permanecem fixas.",
+            summary=f"Somente este período: {period_label}.\n\n"
+            f"Adicionados: {', '.join(added) or 'nenhum'}.\n"
+            f"Removidos: {', '.join(removed) or 'nenhum'}.\n"
+            f"Modificados: {', '.join(modified) or 'nenhum'}.\n"
+            + (
+                "Ordem alterada: " + ", ".join(block_title(b) for b in layout.blocks) + ".\n"
+                if reordered
+                else ""
+            )
+            + (
+                f"Colunas: {layout.grid.columns}.\n"
+                if layout.grid != self.draft.original.grid
+                else ""
+            )
+            + f"Novos campos: {', '.join(fields) or 'nenhum'}.\n\n"
+            f"Ativo a partir de: {activation}.\n"
+            "Os registros históricos serão preservados. "
+            "Modelos e outros períodos não serão alterados. "
+            "Novos campos ficam disponíveis a partir da ativação; "
+            "seleções manuais permanecem fixas.",
         )
+
+    @Slot(str)
+    def startFrom(self, key):
+        """Replace only the draft composition; publication keeps its existing assignment path."""
+        if not self.draft or self.busy or self.preview:
+            return
+        try:
+            layout = self.draft.original
+            if key == "empty":
+                layout = replace(layout, blocks=(), grid=Grid())
+            elif key == "default":
+                defaults = self.report.defaults
+                history = (
+                    defaults[0].history(self.period.scale) if defaults else AssignmentHistory()
+                )
+                active = history.at(datetime.now().astimezone())
+                if active:
+                    unique_layout(self.report, active.layout_id, active.version)
+                result = resolve_layout(
+                    self.period,
+                    datetime.now().astimezone(),
+                    AssignmentHistory(),
+                    history,
+                    tuple(d.layout for d in self.report.layouts),
+                )
+                if result.issues:
+                    raise ValueError(
+                        "O modelo padrão está indisponível. "
+                        "Reabra o Studio após resolver as pendências."
+                    )
+                layout = result.layout
+            elif key != "current":
+                identifier, version = key.split(":")
+                loaded = unique_layout(self.report, UUID(identifier), int(version))
+                if loaded is None:
+                    raise ValueError(
+                        "Modelo não encontrado. Reabra o Studio para atualizar a lista."
+                    )
+                layout = loaded.layout
+            self.draft.scope.clear()
+            self.draft.apply(replace(self.draft.layout, blocks=layout.blocks, grid=layout.grid))
+            self.selected = -1
+            self.instant = None
+            self.message = ""
+        except ValueError as error:
+            self.message = "Não foi possível usar este modelo. " + str(error)
+        self.changed.emit()
 
     @Slot()
     def open(self):
@@ -294,9 +407,10 @@ class LayoutStudio(QObject):
                 value_type = kind.removesuffix("_input") if kind.endswith("_input") else "boolean"
                 if source_id:
                     binding = Binding(UUID(source_id), "metric")
-                    actual = self.source_info(source_id)[3]
-                    if actual != value_type and not (
-                        value_type == "number" and actual == "integer"
+                    _, _, source_kind, actual = self.source_info(source_id)
+                    if source_kind != "metric" or (
+                        actual != value_type
+                        and not (value_type == "number" and actual == "integer")
                     ):
                         raise ValueError("Escolha uma métrica de tipo compatível.")
                 elif name.strip():
@@ -344,7 +458,7 @@ class LayoutStudio(QObject):
             block = Component(
                 uuid4(),
                 kind,
-                name or ("Hábitos" if kind == "checklist" else kind),
+                name or (self.source_info(source_id)[1] if source_id else BLOCK_LABELS[kind]),
                 config,
                 binding=binding,
             )
