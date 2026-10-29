@@ -13,6 +13,7 @@ from habit_workspace.domain.layouts import (
     REGISTRY,
     Binding,
     ChartConfig,
+    ChecklistConfig,
     Component,
     Grid,
     ImageConfig,
@@ -68,7 +69,9 @@ def composition(layout, report, root=None, draft_fields=None, capture=None):
         if capture is not None:
             from habit_workspace.presentation.tracking import cell_mapping
 
-            row["capture"] = [cell_mapping(c) for c in capture.block(block)]
+            row["capture"] = [
+                cell_mapping(c) | {"date": capture.day.isoformat()} for c in capture.block(block)
+            ]
         if block.binding:
             doc = documents.get(str(block.binding.source_id))
             row["bindingLabel"] = (
@@ -90,8 +93,14 @@ def composition(layout, report, root=None, draft_fields=None, capture=None):
         selection = getattr(block.config, "selection", None)
         if selection:
             row["detail"] = (
-                "Seleção fixa: " + ", ".join(map(str, selection.source_ids))
+                "Seleção fixa: "
+                + ", ".join(
+                    documents[str(i)].title if str(i) in documents else "Referência ausente"
+                    for i in selection.source_ids
+                )
                 if selection.mode == "manual"
+                else "Hábitos da data de acompanhamento"
+                if selection.mode == "all"
                 else "Tags dinâmicas (qualquer): " + ", ".join(selection.tags)
             )
         if block.type == "table":
@@ -173,6 +182,14 @@ class LayoutStudio(QObject):
             period=str(self.period),
             message=self.message,
             palette=list(REGISTRY.kinds),
+            habitTags=sorted(
+                {
+                    tag
+                    for loaded in self.report.documents
+                    if loaded.document.kind == "habit"
+                    for tag in loaded.document.metadata["hw"].get("tags", ())
+                }
+            ),
             sources=[
                 dict(
                     id=str(d.document.id),
@@ -307,6 +324,8 @@ class LayoutStudio(QObject):
                 config = (
                     InputConfig(value_type) if kind.endswith("_input") else definition.config_type()
                 )
+            elif kind == "checklist":
+                config = ChecklistConfig(SourceSelection("manual", value_types=("habit",)))
             elif kind == "chart":
                 config = ChartConfig(SourceSelection("manual"))
             elif kind == "image":
@@ -320,7 +339,15 @@ class LayoutStudio(QObject):
                 if kind == "checklist" and source_kind == "metric" and actual != "boolean":
                     raise ValueError("Checklist exige campo booleano ou hábito.")
                 binding = Binding(UUID(source_id), source_kind)
-            block = Component(uuid4(), kind, name or kind, config, binding=binding)
+                if kind == "checklist":
+                    config = ChecklistConfig()
+            block = Component(
+                uuid4(),
+                kind,
+                name or ("Hábitos" if kind == "checklist" else kind),
+                config,
+                binding=binding,
+            )
             self.draft.apply_view(self.draft.view.insert(len(self.draft.view.blocks), block))
             if field:
                 self.fields[field.id] = field
@@ -412,6 +439,15 @@ class LayoutStudio(QObject):
             block = self.draft.view.blocks[self.selected]
             if key == "title":
                 self.draft.update(block.id, title=value)
+            elif isinstance(block.config, ChecklistConfig) and key in (
+                "source",
+                "remove_source",
+                "source_up",
+                "source_down",
+                "selection_mode",
+                "tags",
+            ):
+                self._edit_checklist(block, key, value)
             elif key in ("placeholder", "required") and isinstance(block.config, InputConfig):
                 self.draft.update(
                     block.id,
@@ -511,6 +547,50 @@ class LayoutStudio(QObject):
         except (ValueError, StopIteration, KeyError) as error:
             self.message = "Propriedade inválida: " + str(error)
         self.changed.emit()
+
+    def _edit_checklist(self, block, key, value):
+        selection = block.config.selection
+        if selection is None:
+            selection = SourceSelection(
+                "manual",
+                (block.binding.source_id,) if block.binding else (),
+                value_types=("habit", "boolean")
+                if block.binding and block.binding.kind == "metric"
+                else ("habit",),
+            )
+        if key == "source":
+            identifier, _, kind, actual = self.source_info(value)
+            if kind != "habit" and not (kind == "metric" and actual == "boolean"):
+                raise ValueError("Checklist exige hábitos ou campos booleanos.")
+            ids = selection.source_ids if selection.mode == "manual" else ()
+            types = tuple(dict.fromkeys((*selection.value_types, actual)))
+            selection = SourceSelection(
+                "manual", tuple(dict.fromkeys((*ids, identifier))), value_types=types
+            )
+        elif key == "tags":
+            selection = SourceSelection(
+                "by_tags", tags=tuple(value.split(",")), value_types=("habit",)
+            )
+        elif key == "selection_mode":
+            if value not in ("manual", "all"):
+                raise ValueError("Selecione as tags antes de aplicar o modo dinâmico.")
+            selection = SourceSelection(
+                value,
+                selection.source_ids if value == "manual" else (),
+                value_types=selection.value_types if value == "manual" else ("habit",),
+            )
+        elif key == "remove_source":
+            selection = replace(
+                selection, source_ids=tuple(i for i in selection.source_ids if str(i) != value)
+            )
+        else:
+            ids = list(selection.source_ids)
+            index = ids.index(UUID(value))
+            target = index + (-1 if key == "source_up" else 1)
+            if 0 <= target < len(ids):
+                ids.insert(target, ids.pop(index))
+            selection = replace(selection, source_ids=tuple(ids))
+        self.draft.update(block.id, binding=None, config=ChecklistConfig(selection))
 
     @Slot(int, str, str)
     def columnEdit(self, index, action, value):

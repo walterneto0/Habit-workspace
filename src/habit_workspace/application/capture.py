@@ -422,20 +422,35 @@ class CaptureSnapshot:
         selection = component.config.selection
         if selection is None:
             return []
+        # A manual list is ordered configuration, including unavailable references.
+        # Never sort it by name or drop an ineligible/missing canonical source.
+        if selection.mode == "manual":
+            ordered: list[HabitCell | FieldCell] = []
+            for identifier in selection.source_ids:
+                if identifier in self.fields:
+                    cell = self.field_cell(identifier)
+                    compatible = cell.value_type == "boolean" and "boolean" in selection.value_types
+                else:
+                    cell = self.habit_cell(identifier)
+                    compatible = "habit" in selection.value_types
+                ordered.append(
+                    cell
+                    if compatible
+                    else replace(
+                        cell, editable=False, note="Tipo de fonte incompatível com esta checklist."
+                    )
+                )
+            return ordered
         cells: list[HabitCell | FieldCell] = []
         if "habit" in selection.value_types:
             for habit in sorted(self.habits.values(), key=lambda h: (h.name.casefold(), str(h.id))):
-                if selection.mode == "manual" and habit.id not in selection.source_ids:
-                    continue
                 if selection.mode == "by_tags" and not set(selection.tags) & set(habit.tags):
                     continue
-                if habit.scope.contains(self.day) or str(habit.id) in self.checkins:
+                # Dynamic lists follow the explicit occurrence date. Retain historical
+                # records outside the current schedule, clearly labelled and read-only.
+                if habit.is_scheduled(self.day) or str(habit.id) in self.checkins:
                     cells.append(self.habit_cell(habit.id))
         for field in sorted(self.fields.values(), key=lambda f: (f.name.casefold(), str(f.id))):
             if field.value_type == "boolean" and selection.matches(field):
                 cells.append(self.field_cell(field.id))
-        known = {c.habit_id if isinstance(c, HabitCell) else c.field_id for c in cells}
-        for identifier in selection.source_ids:
-            if identifier not in known and identifier not in self.fields:
-                cells.append(self.habit_cell(identifier))
         return cells

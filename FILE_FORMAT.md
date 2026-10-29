@@ -334,3 +334,30 @@ transaction: a failure may leave an unassigned definition or revision, which is
 preserved and can be reused by an idempotent retry. The SQLite v2 index includes
 layout and assignment projections but remains disposable; scans and metric queries
 derive canonical results from the files.
+
+## Phase 6 refinements: multi-source checklists (no schema migration)
+
+Checklist configuration uses the existing schema-v4 `config.selection` contract:
+
+```json
+{"mode":"manual","source_ids":["ed64a1a4-3b60-4b51-9063-187fd0359241"],"tags":[],"value_types":["habit"]}
+```
+
+- `manual`: ordered, unique canonical UUIDs; changing a name or file path does not
+  change the selection. Missing references remain visible; ineligible dates are
+  labelled `not_scheduled`, never pending or failed.
+- `by_tags`: `source_ids: []`, one or more normalized tag names; **OR** (any selected
+  tag). Newly matching canonical habits enter the query automatically. Example:
+  `{"mode":"by_tags","source_ids":[],"tags":["estudos","saúde"],"value_types":["habit"]}`.
+- `all`: contextual habits for the explicit capture date inside the current period.
+  Example: `{"mode":"all","source_ids":[],"tags":[],"value_types":["habit"]}`.
+  Scope and recurrence both apply. Dynamic modes sort by name/UUID and retain
+  out-of-schedule historical records as labelled, read-only history.
+
+The existing single `binding` representation is still read unchanged. Explicitly
+adding more sources converts that block's binding to a selection in a **new layout
+revision**, retaining the original UUID; there is no automatic file migration.
+Boolean metric bindings/selections remain supported and write observations.
+Checklist selection and single binding remain mutually exclusive. Multiple blocks
+can reference the same habit; their records remain keyed by habit UUID and date in
+one canonical daily page, never copied into a layout or habit definition.

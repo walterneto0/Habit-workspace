@@ -60,6 +60,11 @@ Rectangle {
                             icon: "chart"
                         },
                         {
+                            view: "habits",
+                            label: qsTr("Hábitos"),
+                            icon: "day"
+                        },
+                        {
                             view: "notes",
                             label: qsTr("Documentos e notas"),
                             icon: "note"

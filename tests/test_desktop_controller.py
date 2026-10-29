@@ -231,7 +231,8 @@ def test_habit_visible_across_virtual_views_without_io_or_duplication(
     monkeypatch.setattr(Recurrence, "occurrences", forbidden)
     for view in ("year", "month", "week", "day"):
         desktop.navigate(view, "2026-10-29")
-        assert [row["id"] for row in desktop.state["documents"]] == [str(loaded.habit.id)]
+        assert desktop.state["documents"] == []
+        assert [row["id"] for row in desktop.state["habits"]["rows"]] == [str(loaded.habit.id)]
     desktop.navigate("month", "2027-01-01")
     assert desktop.state["documents"] == []
     assert loaded.loaded.path.read_bytes() == raw

@@ -72,7 +72,7 @@ ColumnLayout {
                 text: modelData.label
                 selected: root.cell.recorded === modelData.state
                 hint: selected ? qsTr("Registrado como ") + modelData.label : qsTr("Registrar como ") + modelData.label
-                Accessible.name: root.cell.name + " · " + hint
+                Accessible.name: root.cell.name + " · " + (root.cell.date || "") + " · " + hint
                 onClicked: root.checkin(root.cell.id, modelData.state, root.cell.token)
             }
         }

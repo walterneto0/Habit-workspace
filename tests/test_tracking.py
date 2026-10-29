@@ -198,6 +198,7 @@ def test_habit_form_validation_override_and_search(desktop):
     hw = habit.document.metadata["hw"]
     assert hw["scope"] == {"start": "2026-10-27", "end_exclusive": None}
     assert hw["tags"] == ["leitura"] and "origin_page_id" not in hw  # No page materialized.
+    desktop.navigate("habits")
     desktop.setQuery("leitura")
     assert [r["id"] for r in desktop.state["documents"]] == [hw["id"]]
     desktop.setQuery(hw["id"][:8])

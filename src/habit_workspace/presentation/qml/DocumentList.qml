@@ -13,9 +13,16 @@ ColumnLayout {
     RowLayout {
         Layout.fillWidth: true
         UiText {
-            text: qsTr("Documentos")
+            text: listing.modelState.view === "habits" ? qsTr("Hábitos") : listing.modelState.period ? qsTr("Página temporal") : qsTr("Documentos e notas")
             font.weight: Font.Medium
             Layout.fillWidth: true
+        }
+        ActionButton {
+            objectName: "collection-new-habit"
+            visible: listing.modelState.view === "habits"
+            text: qsTr("Novo hábito")
+            glyph: "plus"
+            onClicked: listing.backend.newHabit()
         }
         UiText {
             text: String(listing.modelState.documents.length)
@@ -25,15 +32,16 @@ ColumnLayout {
     EmptyState {
         Layout.fillWidth: true
         visible: listing.modelState.documents.length === 0
-        heading: listing.modelState.query ? qsTr("Nenhum resultado") : listing.modelState.period ? qsTr("Um espaço para este período") : qsTr("Seu cofre está pronto para começar")
-        description: listing.modelState.query ? qsTr("Tente outro título, tag ou identificador.") : listing.modelState.period ? qsTr("Nenhum documento vinculado. Você pode explorar os períodos livremente ou importar uma página existente.") : qsTr("Importe uma nota ou página do Habit Workspace. Seus arquivos continuam locais e legíveis em outros editores.")
-        action: listing.modelState.hasVault && !listing.modelState.query ? qsTr("Importar documento") : ""
+        heading: listing.modelState.view === "habits" && !listing.modelState.query ? qsTr("Seus hábitos, em um só lugar") : listing.modelState.query ? qsTr("Nenhum resultado") : listing.modelState.period ? qsTr("Um espaço para este período") : qsTr("Seu cofre está pronto para começar")
+        description: listing.modelState.view === "habits" && !listing.modelState.query ? qsTr("Crie um hábito para definir nome, tags, escopo e recorrência.") : listing.modelState.query ? qsTr("Tente outro título, tag ou identificador.") : listing.modelState.period ? qsTr("Nenhum documento vinculado. Você pode explorar os períodos livremente ou importar uma página existente.") : qsTr("Importe uma nota ou página do Habit Workspace. Seus arquivos continuam locais e legíveis em outros editores.")
+        action: listing.modelState.view === "habits" ? "" : listing.modelState.hasVault && !listing.modelState.query ? qsTr("Importar documento") : ""
         onActivated: listing.importRequested()
     }
     Repeater {
         model: listing.modelState.documents
         delegate: Button {
             id: documentRow
+            objectName: "document-" + modelData.id
             required property var modelData
             Layout.fillWidth: true
             implicitHeight: Math.max(68, rowContent.implicitHeight + 24)
@@ -58,7 +66,7 @@ ColumnLayout {
                     }
                     UiText {
                         Layout.fillWidth: true
-                        text: documentRow.modelData.kind + " · " + documentRow.modelData.path
+                        text: documentRow.modelData.documentKind === "habit" ? documentRow.modelData.properties.recurrence + " · " + documentRow.modelData.properties.scope + (documentRow.modelData.tags ? " · #" + documentRow.modelData.tags.split(", ").join(" #") : "") : documentRow.modelData.kind + (documentRow.modelData.period ? " · " + documentRow.modelData.period : "") + (documentRow.modelData.tags ? " · " + documentRow.modelData.tags : "")
                         color: Theme.muted
                         font.pixelSize: 11
                         wrapMode: Text.WrapAnywhere
@@ -119,14 +127,33 @@ ColumnLayout {
                 }
             }
             UiText {
-                text: qsTr("PRÉVIA DE LEITURA")
+                text: listing.modelState.selected.previewType === "habit" ? qsTr("DEFINIÇÃO DO HÁBITO") : qsTr("PRÉVIA DE LEITURA")
                 font.pixelSize: 10
                 font.letterSpacing: 1
                 color: Theme.muted
             }
-            UiText {
+            ColumnLayout {
+                objectName: "habit-detail"
                 Layout.fillWidth: true
-                text: listing.modelState.selected.excerpt || qsTr("Este documento não contém texto de nota.")
+                visible: listing.modelState.selected.previewType === "habit"
+                readonly property var habit: listing.modelState.selected.habit || ({})
+                spacing: 8
+                UiText { objectName: "habit-detail-scope"; Layout.fillWidth: true; text: qsTr("Escopo: ") + (parent.habit.scope || ""); color: Theme.secondary }
+                UiText { Layout.fillWidth: true; text: qsTr("Recorrência: ") + (parent.habit.recurrence || ""); color: Theme.secondary }
+                UiText { Layout.fillWidth: true; text: qsTr("Tags: ") + (parent.habit.tags || qsTr("Sem tags")); color: Theme.secondary }
+                UiText { objectName: "habit-detail-status"; Layout.fillWidth: true; text: (parent.habit.date || "") + " · " + (parent.habit.stateLabel || ""); color: Theme.secondary }
+                UiText { Layout.fillWidth: true; visible: !!parent.habit.note; text: parent.habit.note || ""; color: Theme.warning }
+                ActionButton {
+                    objectName: "habit-detail-edit"
+                    text: qsTr("Editar hábito")
+                    onClicked: listing.backend.editHabit(listing.modelState.selected.id)
+                }
+            }
+            UiText {
+                objectName: "document-preview"
+                Layout.fillWidth: true
+                visible: listing.modelState.selected.previewType !== "habit" || !!listing.modelState.selected.excerpt
+                text: listing.modelState.selected.excerpt || listing.modelState.selected.fallback || ""
                 color: Theme.secondary
                 lineHeight: 1.4
                 wrapMode: Text.WrapAnywhere

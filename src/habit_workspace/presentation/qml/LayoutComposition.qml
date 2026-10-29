@@ -105,6 +105,13 @@ GridLayout {
                 }
                 UiText { Layout.fillWidth: true; text: card.modelData.title; font.weight: Font.Medium }
                 UiText { Layout.fillWidth: true; text: card.modelData.bindingLabel || ""; visible: text.length > 0 && !(root.tracking && card.cells.length > 0); color: Theme.secondary }
+                UiText {
+                    Layout.fillWidth: true
+                    visible: root.tracking && card.cells.length > 0
+                    text: qsTr("Registros de ") + ((card.cells[0] || {}).date || "")
+                    color: Theme.muted
+                    font.pixelSize: 12
+                }
                 Repeater {
                     model: root.tracking ? card.cells.length : 0
                     delegate: CaptureCell {
@@ -123,7 +130,7 @@ GridLayout {
                 UiText {
                     Layout.fillWidth: true
                     visible: root.tracking && card.captures && card.cells.length === 0
-                    text: card.modelData.type === "checklist" ? qsTr("Checklist sem fonte. Crie um hábito e vincule-o no Layout Studio.") : qsTr("Campo sem definição vinculada.")
+                    text: card.modelData.type === "checklist" ? qsTr("Nenhum hábito elegível nesta data ou seleção vazia. Configure os hábitos no Layout Studio.") : qsTr("Campo sem definição vinculada.")
                     color: Theme.secondary
                 }
                 StudioCheckBox {
