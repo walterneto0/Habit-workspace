@@ -74,3 +74,20 @@ def test_studio_pointer_property_and_reopen_verification():
     assert result.returncode == 0, result.stdout + result.stderr
     assert '"qmlWarnings": []' in result.stdout
     assert not result.stderr, result.stderr
+
+
+def test_multi_habit_checklist_and_type_aware_browser():
+    from pathlib import Path
+
+    script = Path(__file__).resolve().parents[1] / "tools/verify_phase6_refinements.py"
+    result = subprocess.run(
+        [sys.executable, str(script)],
+        env={**os.environ, "QT_QPA_PLATFORM": "offscreen", "QT_QUICK_BACKEND": "software"},
+        capture_output=True,
+        text=True,
+        timeout=90,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert '"result": "PASS"' in result.stdout
+    assert '"qmlWarnings": []' in result.stdout
+    assert not result.stderr, result.stderr

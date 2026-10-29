@@ -93,3 +93,21 @@ def date_state(period: PeriodRef, day: date, today: date) -> dict:
         canNext=day < period.end,
         fixed=period.start == period.end,
     )
+
+
+def habit_properties(habit) -> dict:
+    """Shared display labels for the canonical definition, independent of its path."""
+    from datetime import timedelta
+
+    end = habit.scope.end_exclusive
+    return dict(
+        id=str(habit.id),
+        name=habit.name,
+        tags=", ".join(habit.tags),
+        scope=habit.scope.start.isoformat()
+        + " → "
+        + ((end - timedelta(days=1)).isoformat() if end else "sem término"),
+        recurrence="Diário"
+        if habit.recurrence.kind == "daily"
+        else ", ".join(WEEKDAYS[d - 1] for d in habit.recurrence.days),
+    )

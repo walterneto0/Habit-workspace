@@ -51,8 +51,15 @@ ColumnLayout {
         text: { const f = root.state.field || {}; return qsTr("Definição vinculada: ") + (f.value_type || "") + " · " + (f.unit || "") + "\n" + (f.temporal_policy || "") + " · " + (f.aggregation || "") + "\n" + (f.options || []).join(", ") + (f.minimum !== null && f.minimum !== undefined ? "\nMínimo: " + f.minimum : "") + (f.maximum !== null && f.maximum !== undefined ? " · Máximo: " + f.maximum : ""); }
         color: Theme.secondary
     }
-    UiText { visible: root.current.type !== "section" && root.current.type !== "image"; text: qsTr("Fonte por nome (UUID preservado)") }
-    Input { id: sourceSearch; Layout.fillWidth: true; visible: root.current.type !== "section" && root.current.type !== "image"; placeholderText: qsTr("Buscar fonte") }
+    Loader {
+        Layout.fillWidth: true
+        active: root.current.type === "checklist"
+        sourceComponent: Component {
+            ChecklistProperties { studio: root.studio; current: root.current; sources: root.sources; tagOptions: root.state.habitTags || [] }
+        }
+    }
+    UiText { visible: root.current.type !== "checklist" && root.current.type !== "section" && root.current.type !== "image"; text: qsTr("Fonte por nome (UUID preservado)") }
+    Input { id: sourceSearch; Layout.fillWidth: true; visible: root.current.type !== "checklist" && root.current.type !== "section" && root.current.type !== "image"; placeholderText: qsTr("Buscar fonte") }
     StudioChoice {
         id: source
         objectName: "studio-source"

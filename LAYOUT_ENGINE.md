@@ -82,3 +82,22 @@ Preview antes do save mostra o que muda: componentes adicionados/removidos, novo
 7. Editar o JSON do layout externo (válido) permite reabrir com visual correto; JSON inválido mantém o arquivo e mostra erro, sem executar conteúdo.
 8. Importar semana isolada avisa falta de layout; importar pacote com dependências recompõe layout e dados.
 9. Semana que cruza meses não duplica nem reparte métricas semanais sem regra de atribuição.
+
+## Refinamentos da Fase 6 — checklist reutilizável
+
+No Studio, uma checklist permite buscar e adicionar vários hábitos, remover da
+seleção e reordenar por botões acessíveis ao teclado. A seleção manual salva UUIDs
+na ordem escolhida e impede duplicatas. Campos booleanos existentes continuam
+opcionais; criar um novo campo permanece uma ação explícita na biblioteca.
+
+Os modos alternativos são **Tags dinâmicas** (qualquer tag, OU; novas definições
+compatíveis entram automaticamente) e **Contextual · data selecionada** (escopo e
+recorrência na data de acompanhamento). Em semanas/meses/anos, a checklist acompanha
+um dia explícito do período; a data também aparece no bloco. Não existe conclusão
+única da semana ou do mês. Uma seleção manual mantém itens fora da programação
+visíveis e não editáveis. Registros históricos fora da programação atual continuam
+identificados e preservados. Ausência de registro nunca significa falha.
+
+O esquema v4 já comporta esses modos; bindings individuais existentes não são
+reescritos ao abrir. Editar a seleção usa o mesmo histórico de versões, desfazer,
+refazer e publicação. Remover uma seleção ou bloco não apaga definições nem registros.

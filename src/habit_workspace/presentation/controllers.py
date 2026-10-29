@@ -21,9 +21,15 @@ from habit_workspace.application.habits import HabitService, HistoryImpactError
 from habit_workspace.application.imports import ImportService
 from habit_workspace.application.vault import VaultSession
 from habit_workspace.domain.documents import Document, DocumentError
-from habit_workspace.domain.temporal import Recurrence, TemporalScope
+from habit_workspace.domain.temporal import PeriodRef, Recurrence, TemporalScope
 from habit_workspace.presentation.navigation import Navigation, long_date
-from habit_workspace.presentation.tracking import STATE_LABELS, date_state, default_day
+from habit_workspace.presentation.tracking import (
+    STATE_LABELS,
+    cell_mapping,
+    date_state,
+    default_day,
+    habit_properties,
+)
 from habit_workspace.vault.atomic_io import ConflictError, read_bytes
 from habit_workspace.vault.format import decode
 from habit_workspace.vault.habits import habit_from_document
@@ -72,6 +78,7 @@ class WorkspaceController(QObject):
         self.session: VaultSession | None = None
         self.watcher: VaultWatcher | None = None
         self._selected = ""
+        self._detail_day = self.today
         self._query = ""
         self._notice = ""
         self._notice_error = False
@@ -155,24 +162,14 @@ class WorkspaceController(QObject):
             for record in loaded.document.metadata["hw"].get("checkins", ())
             if interval.contains(date.fromisoformat(record["date"]))
         ]
-        weekdays = ("Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom")
         rows = []
         for habit in sorted(habits.values(), key=lambda h: (h.name.casefold(), str(h.id))):
             if not habit.scope.intersects(interval):
                 continue
-            end = habit.scope.end_exclusive
             cell = snapshot.habit_cell(habit.id)
             rows.append(
                 dict(
-                    id=str(habit.id),
-                    name=habit.name,
-                    tags=", ".join(habit.tags),
-                    scope=habit.scope.start.isoformat()
-                    + " → "
-                    + ((end - timedelta(days=1)).isoformat() if end else "sem término"),
-                    recurrence="Diário"
-                    if habit.recurrence.kind == "daily"
-                    else ", ".join(weekdays[d - 1] for d in habit.recurrence.days),
+                    **habit_properties(habit),
                     stateLabel=STATE_LABELS.get(cell.state, cell.state),
                     outside=sum(
                         r["habit_id"] == str(habit.id)
@@ -300,7 +297,7 @@ class WorkspaceController(QObject):
         return self._observe(field_id, "", None, expected)
 
     def _form(self, **values):
-        period = self.navigation.period_ref
+        period = self.navigation.period_ref or PeriodRef.containing("day", self._detail_day)
         self._habit_form = (
             dict(
                 open=True,
@@ -316,8 +313,10 @@ class WorkspaceController(QObject):
                 bind=False,
                 error="",
                 impact=False,
-                periodLabel=self.navigation.title,
-                canBind=True,
+                periodLabel=self.navigation.title
+                if self.navigation.period
+                else long_date(self._detail_day),
+                canBind=bool(self.navigation.period),
             )
             | values
         )
@@ -325,13 +324,13 @@ class WorkspaceController(QObject):
 
     @Slot()
     def newHabit(self):
-        if self.session and self.navigation.period_ref and not self._guard_studio():
+        if self.session and not self._guard_studio():
             self._editing_habit = None
             self._form()
 
     @Slot(str)
     def editHabit(self, identifier: str):
-        if not self.session or not self.navigation.period_ref or self._guard_studio():
+        if not self.session or self._guard_studio():
             return
         try:
             loaded = HabitService(self.session).load(identifier)
@@ -363,7 +362,7 @@ class WorkspaceController(QObject):
     def saveHabit(self, values) -> bool:
         if not self.session or not self._habit_form or self._guard_studio():
             return False
-        period = self.navigation.period_ref
+        period = self.navigation.period_ref or PeriodRef.containing("day", self._detail_day)
         form = dict(self._habit_form) | {
             k: values.get(k, self._habit_form[k])
             for k in ("name", "tags", "scopeMode", "start", "end", "recurrence", "days", "bind")
@@ -488,6 +487,10 @@ class WorkspaceController(QObject):
                     "id": str(doc.id),
                     "title": doc.title or "Documento sem título",
                     "kind": KIND_LABELS[doc.kind],
+                    "documentKind": doc.kind.value,
+                    "properties": habit_properties(habit_from_document(doc))
+                    if doc.kind == "habit"
+                    else {},
                     "path": str(loaded.path.relative_to(self.session.root)),
                     "period": hw.get("period", "day/" + hw["date"] if "date" in hw else ""),
                     "tags": ", ".join(hw.get("tags", [])),
@@ -550,6 +553,29 @@ class WorkspaceController(QObject):
             for d in self.session.report.documents
             if str(d.document.id) == self._selected
         )
+        row["previewType"] = (
+            "habit" if doc.kind == "habit" else "note" if doc.kind == "note" else "structured"
+        )
+        row["fallback"] = (
+            "Esta nota ainda não contém texto."
+            if doc.kind == "note"
+            else "Documento estruturado · "
+            + row["kind"]
+            + (" · " + row["period"] if row["period"] else "")
+        )
+        if doc.kind == "habit":
+            day = self.capture_day or self._detail_day
+            snapshot = CaptureSnapshot(self.session.report, day, self.today)
+            row["habit"] = (
+                habit_properties(habit_from_document(doc))
+                | cell_mapping(snapshot.habit_cell(doc.id))
+                | {"date": day.isoformat()}
+            )
+        if doc.kind == "metric_definition":
+            hw = doc.metadata["hw"]
+            row["fallback"] += (
+                f"\n{doc.title} · {hw['value_type']} · ativo desde {hw['active_from']}"
+            )
         row["excerpt"] = excerpt(doc.body)
         row["truncated"] = len(doc.body) > 6000
         row["records"] = []
@@ -570,20 +596,13 @@ class WorkspaceController(QObject):
         entries = self._entries()
         visible = entries
         if nav.period:
-            # Scope-only filtering of the existing scan: no filesystem work or
-            # occurrence expansion on the GUI thread, and no generated pages.
-            interval = nav.period_ref.scope
-            habit_ids = (
-                {
-                    str(entry.document.id)
-                    for entry in self.session.report.documents
-                    if entry.document.kind == "habit"
-                    and habit_from_document(entry.document).scope.intersects(interval)
-                }
-                if self.session
-                else set()
-            )
-            visible = [r for r in visible if r["period"] == nav.period or r["id"] in habit_ids]
+            visible = [r for r in visible if r["period"] == nav.period]
+        elif nav.view == "habits":
+            visible = [r for r in visible if r["documentKind"] == "habit"]
+        else:
+            visible = [
+                r for r in visible if r["documentKind"] in ("note", "page", "metric_definition")
+            ]
         if self._query:
             query = self._query.casefold()
             visible = [
@@ -681,6 +700,8 @@ class WorkspaceController(QObject):
         if self._guard_studio():
             return False
         try:
+            if self.capture_day:
+                self._detail_day = self.capture_day
             self.navigation.select(view, value)
             self._query = ""
             self._selected = ""
@@ -835,6 +856,16 @@ class WorkspaceController(QObject):
                 message += "\n" + result.invalid[0].message
             self._pending, self._preview = None, {}
             self.navigation.view = "notes"
+            if result.imported:
+                imported = self.session.load(result.imported[0].document_id).document
+                if imported.kind == "habit":
+                    self.navigation.view = "habits"
+                elif imported.kind.value.endswith("_page"):
+                    hw = imported.metadata["hw"]
+                    period = PeriodRef(
+                        hw.get("period", "day/" + hw["date"] if "date" in hw else "")
+                    )
+                    self.navigation.select(period.scale.value, period.start.isoformat())
             self._query = ""
             if result.imported:
                 self._selected = str(result.imported[0].document_id)

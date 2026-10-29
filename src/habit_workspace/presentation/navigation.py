@@ -79,12 +79,21 @@ class Navigation:
         return {
             "overview": "Visão geral",
             "notes": "Documentos e notas",
+            "habits": "Hábitos",
             "statistics": "Estatísticas",
             "settings": "Configurações",
         }.get(self.view, "")
 
     def select(self, view: str, value: str = "") -> None:
-        if view not in (*SCALES, "overview", "calendar", "notes", "statistics", "settings"):
+        if view not in (
+            *SCALES,
+            "overview",
+            "calendar",
+            "notes",
+            "habits",
+            "statistics",
+            "settings",
+        ):
             raise ValueError("Destino de navegação desconhecido.")
         target = date.fromisoformat(value) if value else self.anchor
         # Leave one year at either end for complete adjacent calendar weeks.

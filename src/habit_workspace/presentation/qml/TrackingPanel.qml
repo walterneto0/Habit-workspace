@@ -10,6 +10,7 @@ ColumnLayout {
     required property var modelState
     readonly property var tracking: modelState.tracking || ({})
     readonly property var habits: modelState.habits || ({})
+    property bool showDefinitions: false
     spacing: 12
     Surface {
         Layout.fillWidth: true
@@ -88,7 +89,13 @@ ColumnLayout {
             spacing: 10
             RowLayout {
                 Layout.fillWidth: true
-                UiText { Layout.fillWidth: true; text: qsTr("Hábitos deste período"); font.weight: Font.Medium }
+                UiText { Layout.fillWidth: true; text: qsTr("Hábitos deste período") + " · " + (root.habits.rows || []).length; font.weight: Font.Medium }
+                ActionButton {
+                    objectName: "toggle-habit-definitions"
+                    text: root.showDefinitions ? qsTr("Recolher") : qsTr("Ver definições")
+                    visible: (root.habits.rows || []).length > 0
+                    onClicked: root.showDefinitions = !root.showDefinitions
+                }
                 ActionButton {
                     objectName: "new-habit"
                     glyph: "plus"
@@ -103,7 +110,7 @@ ColumnLayout {
                 color: root.habits.error ? Theme.error : Theme.secondary
             }
             Repeater {
-                model: root.habits.rows || []
+                model: root.showDefinitions ? (root.habits.rows || []) : []
                 delegate: RowLayout {
                     id: habitRow
                     required property var modelData

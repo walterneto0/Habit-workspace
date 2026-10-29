@@ -256,7 +256,7 @@ ApplicationWindow {
                                 }
                                 UiText {
                                     Layout.fillWidth: true
-                                    text: window.modelState.period ? window.modelState.range : window.modelState.view === "overview" ? (window.modelState.hasVault ? qsTr("Seu planejamento, no seu tempo.  ·  ") + window.modelState.todayLabel : qsTr("Planeje com calma. Mantenha seus arquivos por perto.")) : window.modelState.view === "notes" ? qsTr("Páginas e notas do seu cofre, onde quer que estejam salvas.") : window.modelState.view === "settings" ? qsTr("Ajuste seu espaço de trabalho.") : qsTr("Uma visão do que importa, com dados do seu cofre.")
+                                    text: window.modelState.period ? window.modelState.range : window.modelState.view === "overview" ? (window.modelState.hasVault ? qsTr("Seu planejamento, no seu tempo.  ·  ") + window.modelState.todayLabel : qsTr("Planeje com calma. Mantenha seus arquivos por perto.")) : window.modelState.view === "notes" ? qsTr("Documentos e notas do seu cofre, organizados por título e tags.") : window.modelState.view === "habits" ? qsTr("Definições canônicas · escopo, recorrência e tags.") : window.modelState.view === "settings" ? qsTr("Ajuste seu espaço de trabalho.") : qsTr("Uma visão do que importa, com dados do seu cofre.")
                                     color: Theme.secondary
                                     lineHeight: 1.3
                                 }
