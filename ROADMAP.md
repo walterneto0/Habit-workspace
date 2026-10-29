@@ -31,9 +31,15 @@ Implementada e verificada: [relatório da Fase 4](docs/verification/phase-4.md).
 QML com biblioteca de checklist, lista, tabela, gráfico placeholder, nota, imagem e campo tipado; drag-drop, reordenar, propriedades, preview, undo/redo, snap 1–2 colunas, teclado e redução de movimento. Páginas renderizadas como interface composta, NÃO Markdown cru.
 Aceite: criar e editar layout semanal na UI, salvar nova versão em arquivo JSON, reabrir e renderizar mesmo visual; uma atribuição efetiva; exportar página sem layout avisa dependência ausente.
 
-Implementação parcial: [relatório da Fase 5](docs/verification/phase-5.md).
-Fluxo integrado disponível; aceites de propriedades, interação e revisão nativa
-ainda pendentes. A fase não está concluída.
+Implementação inicial: [relatório histórico da Fase 5](docs/verification/phase-5.md).
+O refinamento **5.1** entrega biblioteca agrupada, criação/vínculo de campos em um
+formulário, propriedades progressivas, pontos de partida e revisão antes de salvar.
+A jornada completa, regressões das Fases 5/6 e renderização nativa Linux/X11 foram
+verificadas: [relatório 5.1](docs/verification/phase-5-ux-refinement.md).
+Aceite técnico do editor para essa jornada atendido; revisão humana de acessibilidade
+e validação em outras plataformas permanecem pendentes. Notas/listas editáveis,
+captura de linhas de tabelas e gráficos calculados continuam nas fases posteriores.
+Nenhuma implementação da Fase 7 foi iniciada.
 
 ## Fase 6 — Hábitos e captura estruturada
 Check-ins vinculados a hábito por UUID e observações vinculadas a Fields por UUID, arquivo diário canônico; tags, busca e escopo/recorrência.

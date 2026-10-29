@@ -25,6 +25,14 @@ Canvas {
         }
         c.beginPath();
         switch (name) {
+        case "drag":
+            for (let x of [9, 15]) {
+                for (let y of [6, 12, 18]) {
+                    c.moveTo(x + 0.8, y);
+                    c.arc(x, y, 0.8, 0, 2 * Math.PI);
+                }
+            }
+            break;
         case "left":
             line(14, 6, 8, 12);
             line(8, 12, 14, 18);

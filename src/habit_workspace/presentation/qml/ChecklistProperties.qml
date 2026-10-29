@@ -32,7 +32,7 @@ ColumnLayout {
         Layout.fillWidth: true
         visible: root.mode === "manual" && !root.choosingTags
         StudioCheckBox {
-            text: qsTr("Buscar também campos booleanos")
+            text: qsTr("Incluir campos Sim/Não")
             checked: root.includeBooleanFields
             onToggled: root.includeBooleanFields = checked
         }
@@ -47,7 +47,7 @@ ColumnLayout {
             id: candidate
             objectName: "checklist-candidate"
             Layout.fillWidth: true
-            label: root.includeBooleanFields ? qsTr("Hábito ou campo booleano existente") : qsTr("Hábito existente")
+            label: root.includeBooleanFields ? qsTr("Hábito ou campo Sim/Não existente") : qsTr("Hábito existente")
             model: root.habits.filter(s => !root.selectedIds.includes(s.id) && s.name.toLowerCase().includes(search.text.toLowerCase()))
             textRole: "name"
         }

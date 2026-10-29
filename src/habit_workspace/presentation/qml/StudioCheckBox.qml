@@ -3,7 +3,7 @@ import QtQuick.Controls
 
 CheckBox {
     id: control
-    implicitHeight: 36
+    implicitHeight: Math.max(36, label.implicitHeight + 8)
     implicitWidth: label.implicitWidth + 40
     focusPolicy: Qt.StrongFocus
     Accessible.name: text

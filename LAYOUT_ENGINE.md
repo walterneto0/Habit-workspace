@@ -101,3 +101,31 @@ identificados e preservados. Ausência de registro nunca significa falha.
 O esquema v4 já comporta esses modos; bindings individuais existentes não são
 reescritos ao abrir. Editar a seleção usa o mesmo histórico de versões, desfazer,
 refazer e publicação. Remover uma seleção ou bloco não apaga definições nem registros.
+
+## Layout Studio — refinamento 5.1
+
+**Adicionar bloco** abre a biblioteca agrupada e pesquisável. Inputs usam um único
+formulário com **Usar existente / Criar novo**, filtrando fontes por compatibilidade
+antes da seleção. Número decimal também aceita campo inteiro, conforme o contrato
+existente. Uma nota não pode ser usada como definição de campo de texto. Checklist
+continua usando a seleção manual múltipla, tags OU ou contexto da data da Fase 6;
+criar hábitos permanece no fluxo de hábitos, separado de criar campos.
+
+Os rótulos em português são projeções de apresentação: `integer`, `number`,
+`daily`, `weekly`, agregações e políticas serializadas não mudam. Não há novo
+esquema, migração, dependência ou local de armazenamento. Campos novos continuam
+rascunhos até salvar; campos não referenciados não são publicados. Propriedades
+avançadas de definições existentes são consultáveis, sem mudar sua semântica.
+
+**Ponto de partida** substitui somente os blocos e a grade do rascunho atual.
+Pode restaurar o layout vigente ao abrir, esvaziar, resolver o padrão da escala
+pelo resolver existente ou usar uma versão de layout já no cofre. Desfazer/refazer
+continua disponível. Publicação usa o mesmo `save_revision`, precondições de
+conflito, regras de fork/identidade e histórico exclusivo por período. O registro
+de padrões e atribuições de outros períodos nunca são alterados por essa escolha.
+
+O resumo de publicação lista títulos adicionados/removidos/modificados, mudanças
+de ordem/colunas, novos campos e instante local de ativação. Abrir, selecionar um
+modelo e visualizar a prévia não gravam documentos. Captura continua exclusivamente
+na página normal, depois de salvar ou sair do Studio. Referências e dados históricos
+sobrevivem a remoção, mudança de largura e reorganização.

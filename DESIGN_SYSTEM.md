@@ -101,3 +101,32 @@ Fonte sans legível com pesos regulares e médios, de licença adequada à distr
 - Páginas normais renderizam cards QML; notas são apresentadas no bloco de texto, não como documentos Markdown inteiros.
 - Usar tokens globais do tema dark/light, hover/focus de alto contraste, animation opacity/transform por 150–280ms e opção para reduzir movimento.
 - Estados de drop: válido, inválido, campo requerido, destino ocupado, divergência de tipo; salvar só quando o esquema do layout for validado.
+
+## Refinamento do Layout Studio — Fase 5.1
+
+- **Adicionar bloco** é a entrada principal. A biblioteca tem busca e categorias
+  Acompanhamento, Conteúdo, Campos de dados e Visualizações, com limitações futuras
+  explícitas. Nomes de tipos e valores de configuração são apresentados em pt-BR.
+- Um bloco organiza a página; uma fonte é um hábito/campo reutilizável; um novo
+  campo cria uma definição; um valor é registrado no acompanhamento. O formulário
+  de campo reúne **Usar existente / Criar novo**, busca compatível e configuração.
+  Não repetir nome/tags na biblioteca. Priorizar fontes existentes quando disponíveis.
+- Nome, tipo e unidade aparecem primeiro. Tags, limites, agregação, frequência e
+  atribuição semanal ficam em **Opções avançadas**. Erros ficam junto aos campos;
+  mantêm o diálogo e os valores. A frequência semanal explica a captura indisponível.
+- Diálogos do Studio usam a paleta do tema, ações persistentes no rodapé e altura
+  proporcional ao conteúdo, limitada à janela. O formulário fica disponível antes
+  da animação; o primeiro controle útil recebe foco. Cancelar é uma ação explícita.
+- Cabeçalhos dos cards usam título, alça de seis pontos e **Editar**. Propriedades
+  identificam o bloco e oferecem mover, largura, duplicar e remover. Drag/drop é
+  opcional; mantém encaixe em uma/duas colunas e feedback de validade existente.
+- A partir de 1100 px: biblioteca, página e propriedades lado a lado. Entre 900 e
+  1099 px: biblioteca abre em painel sobreposto pelo botão Adicionar bloco. Abaixo
+  de 900 px: alternar **Página / Propriedades**, com biblioteca sobreposta. Cada
+  região tem rolagem própria. Nenhuma ação essencial depende de arrastar.
+- Sem seleção, propriedades explicam como começar. **Ponto de partida** oferece
+  layout atual, vazio, padrão da escala e versões existentes; a substituição do
+  rascunho é explícita e reversível. O resumo antes de salvar nomeia o período,
+  blocos alterados, fontes novas e vigência; confirma a preservação do histórico.
+- Animações dos diálogos, biblioteca e controles respeitam `Theme.duration`, que
+  vale zero com movimento reduzido. Foco visível e navegação Tab são obrigatórios.
