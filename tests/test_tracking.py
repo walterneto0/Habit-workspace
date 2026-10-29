@@ -24,12 +24,14 @@ class FrozenDatetime(datetime):
         return value if tz is None else value.astimezone(tz)
 
 
-@pytest.fixture(autouse=True)
-def frozen_clock(monkeypatch):
-    from habit_workspace.presentation import controllers, layout_studio
+class FrozenClock:
+    """Injected controller clock: civil TODAY with FrozenDatetime instants."""
 
-    monkeypatch.setattr(controllers, "datetime", FrozenDatetime)
-    monkeypatch.setattr(layout_studio, "datetime", FrozenDatetime)
+    def now(self):
+        return FrozenDatetime.now().astimezone()
+
+    def today(self):
+        return TODAY
 
 
 def controller(tmp_path):
@@ -37,7 +39,7 @@ def controller(tmp_path):
 
     QCoreApplication.instance() or QCoreApplication([])
     return WorkspaceController(
-        settings=QSettings(str(tmp_path / "prefs"), QSettings.IniFormat), today=TODAY
+        settings=QSettings(str(tmp_path / "prefs"), QSettings.IniFormat), clock=FrozenClock()
     )
 
 

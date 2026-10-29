@@ -4,6 +4,7 @@ from PySide6.QtCore import QFileSystemWatcher, QObject, QTimer, Signal, Slot
 
 from habit_workspace.application.vault import VaultSession
 from habit_workspace.domain.documents import DocumentError
+from habit_workspace.vault.scanner import fingerprint
 
 
 class VaultWatcher(QObject):
@@ -30,6 +31,7 @@ class VaultWatcher(QObject):
         self.filesystem.directoryChanged.connect(self._schedule)
         self.debounce.timeout.connect(self.refresh)
         self.periodic.timeout.connect(self.refresh)
+        self._emitted: tuple | None = None
 
     @property
     def paths(self) -> list[str]:
@@ -53,9 +55,12 @@ class VaultWatcher(QObject):
         self.debounce.start()
 
     @Slot()
-    def refresh(self) -> None:
+    def refresh(self, force: bool = False) -> None:
+        """Rescan files; announce only a changed snapshot unless ``force`` (reindex)."""
         self.debounce.stop()
         try:
+            if force:
+                self.session.request_index_rebuild()
             report = self.session.scan()
             # Atomic editor saves and renames drop OS watches: reattach every scan.
             wanted = {str(p) for p in report.directories}
@@ -73,7 +78,10 @@ class VaultWatcher(QObject):
             if wanted - current:
                 # Unwatchable paths still receive explicit/periodic scan coverage.
                 self.filesystem.addPaths(sorted(wanted - current))
-            self.refreshed.emit(report)
+            snapshot = fingerprint(report)
+            if force or snapshot != self._emitted:
+                self._emitted = snapshot
+                self.refreshed.emit(report)
             if self.session.index_error:
                 self.failed.emit(self.session.index_error)
         except (OSError, DocumentError) as error:

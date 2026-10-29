@@ -9,11 +9,23 @@ from uuid import uuid4
 from habit_workspace.application.imports import ImportService
 from habit_workspace.application.vault import VaultSession
 from habit_workspace.domain.documents import Document, DocumentError
+from habit_workspace.vault.atomic_io import inspect_lock, recover_lock
+from habit_workspace.vault.manager import VaultManager
 
 
 def configure(parser: argparse.ArgumentParser) -> None:
     commands = parser.add_subparsers(dest="vault_command", required=True)
-    for name in ("create", "open", "scan", "reindex", "import", "show", "new-note"):
+    for name in (
+        "create",
+        "open",
+        "scan",
+        "reindex",
+        "import",
+        "show",
+        "new-note",
+        "lock-status",
+        "unlock",
+    ):
         command = commands.add_parser(name)
         command.add_argument(
             "directory", type=Path, help="Explicit vault folder; no default location"
@@ -32,6 +44,12 @@ def configure(parser: argparse.ArgumentParser) -> None:
         elif name == "new-note":
             command.add_argument("--title", required=True)
             command.add_argument("--body", default="")
+        elif name == "unlock":
+            command.add_argument(
+                "--token",
+                required=True,
+                help="Token printed by lock-status; recovery is refused unless verified stale",
+            )
 
 
 def _default(value):
@@ -42,8 +60,32 @@ def emit(value) -> None:
     print(json.dumps(value, default=_default, ensure_ascii=False, indent=2))
 
 
+def lock_report(status) -> dict:
+    if status is None:
+        return {"locked": False}
+    return {
+        "locked": True,
+        "path": status.path,
+        "owner": status.owner,
+        "entries": status.entries,
+        "age_seconds": round(status.age_seconds) if status.age_seconds is not None else None,
+        "same_machine": status.same_machine,
+        "process": status.process,
+        "verified_stale": status.stale,
+        "diagnosis": status.describe(),
+    }
+
+
 def run(args: argparse.Namespace) -> int:
     try:
+        if args.vault_command in ("lock-status", "unlock"):
+            # Read-only diagnosis first; never scans, indexes or edits documents.
+            root = VaultManager.open(args.directory).root
+            if args.vault_command == "lock-status":
+                emit(lock_report(inspect_lock(root)))
+                return 0
+            emit({"recovered": lock_report(recover_lock(root, args.token))})
+            return 0
         session = (
             VaultSession.create(args.directory, args.name)
             if args.vault_command == "create"

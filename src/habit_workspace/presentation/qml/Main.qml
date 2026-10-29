@@ -457,6 +457,7 @@ ApplicationWindow {
                                         onClicked: window.backend.layoutStudio.open()
                                     }
                                 }
+                                UiText { objectName: "layout-notice"; Layout.fillWidth: true; text: window.modelState.composition.layoutNotice || ""; color: Theme.secondary; visible: text.length > 0 }
                                 UiText { Layout.fillWidth: true; text: (window.modelState.composition.issues || []).concat(window.modelState.composition.captureError ? [window.modelState.composition.captureError] : []).join("\n"); color: Theme.warning; visible: text.length > 0 }
                                 LayoutComposition {
                                     objectName: "tracking-composition"

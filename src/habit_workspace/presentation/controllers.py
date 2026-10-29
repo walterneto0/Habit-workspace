@@ -3,11 +3,11 @@
 import json
 import re
 from dataclasses import replace
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 from pathlib import Path
 from uuid import UUID, uuid4
 
-from PySide6.QtCore import Property, QObject, QSettings, QUrl, Signal, Slot
+from PySide6.QtCore import Property, QObject, QSettings, QTimer, QUrl, Signal, Slot
 from PySide6.QtGui import QDesktopServices
 
 from habit_workspace.application.capture import (
@@ -22,6 +22,7 @@ from habit_workspace.application.imports import ImportService
 from habit_workspace.application.vault import VaultSession
 from habit_workspace.domain.documents import Document, DocumentError
 from habit_workspace.domain.temporal import PeriodRef, Recurrence, TemporalScope
+from habit_workspace.presentation.clock import PinnedDateClock, SystemClock
 from habit_workspace.presentation.navigation import Navigation, long_date
 from habit_workspace.presentation.tracking import (
     STATE_LABELS,
@@ -29,8 +30,10 @@ from habit_workspace.presentation.tracking import (
     date_state,
     default_day,
     habit_properties,
+    instant_label,
+    layout_notice,
 )
-from habit_workspace.vault.atomic_io import ConflictError, read_bytes
+from habit_workspace.vault.atomic_io import ConflictError, LockedError, read_bytes
 from habit_workspace.vault.format import decode
 from habit_workspace.vault.habits import habit_from_document
 from habit_workspace.vault.scanner import reference_problem
@@ -70,10 +73,14 @@ def excerpt(body: str) -> str:
 class WorkspaceController(QObject):
     changed = Signal()
 
-    def __init__(self, parent=None, *, settings=None, today=None):
+    # Cheap civil-date check; also catches resume from suspend and clock changes.
+    DATE_CHECK_MS = 30_000
+
+    def __init__(self, parent=None, *, settings=None, today=None, clock=None):
         super().__init__(parent)
         self.settings = settings if settings is not None else QSettings()
-        self.today = today or date.today()
+        self.clock = clock or (PinnedDateClock(today) if today else SystemClock())
+        self.today = self.clock.today()
         self.navigation = Navigation(self.today)
         self.session: VaultSession | None = None
         self.watcher: VaultWatcher | None = None
@@ -92,6 +99,10 @@ class WorkspaceController(QObject):
         from habit_workspace.presentation.layout_studio import LayoutStudio
 
         self.studio = LayoutStudio(self)
+        self.date_timer = QTimer(self)
+        self.date_timer.setInterval(self.DATE_CHECK_MS)
+        self.date_timer.timeout.connect(self.refreshDate)
+        self.date_timer.start()
         self._publish()
 
     @Property("QVariantMap", notify=changed)
@@ -109,8 +120,9 @@ class WorkspaceController(QObject):
         from habit_workspace.presentation.layout_studio import composition
 
         try:
+            # Policy (6.5A): tracking always shows the period's current layout.
             resolved = LayoutService.resolve_report(
-                self.session.report, self.navigation.period_ref, datetime.now().astimezone()
+                self.session.report, self.navigation.period_ref, self.clock.now()
             )
             capture = CaptureSnapshot(self.session.report, self.capture_day, self.today)
             return dict(
@@ -119,9 +131,16 @@ class WorkspaceController(QObject):
                 ),
                 columns=resolved.layout.grid.columns,
                 issues=list(resolved.issues),
-                activation=resolved.assignment.effective_at.isoformat()
+                activation=instant_label(resolved.assignment.effective_at)
                 if resolved.assignment
                 else "Padrão interno",
+                layoutNotice=layout_notice(
+                    self.session.report,
+                    self.navigation.period_ref,
+                    self.capture_day,
+                    self.today,
+                    resolved,
+                ),
                 captureError=capture.error,
             )
         except (ValueError, OSError) as error:
@@ -189,8 +208,44 @@ class WorkspaceController(QObject):
             ],
         }
 
+    @Slot(result=bool)
+    def refreshDate(self) -> bool:
+        """Follow the local civil date after midnight, suspend or a clock change.
+
+        Pending/past/future/eligible states derive from ``today`` and are recomputed by
+        publishing. Navigation follows only a person who is looking at the previous
+        "today" with no explicit capture date and no open form, draft or import;
+        otherwise their page stays put and a notice offers "Hoje". No vault rescan.
+        """
+        current = self.clock.today()
+        if current == self.today:
+            return False
+        previous, self.today = self.today, current
+        busy = bool(self.studio.draft or self._habit_form or self._pending)
+        if self._detail_day == previous:
+            self._detail_day = current
+        if self.navigation.anchor == previous and self._capture_day is None and not busy:
+            self.navigation.anchor = current
+            self._feedback = {}
+        elif self.navigation.period and not self._notice_error:
+            self._notice = (
+                f"A data local agora é {long_date(current)}. Você continua em "
+                f"{self.navigation.title}; use Hoje para ir ao dia atual."
+            )
+        self._publish()
+        return True
+
+    def _capture_target(self) -> date | None:
+        """The occurrence date the person saw, even if the civil date just changed."""
+        day = self.capture_day
+        if day is not None and self.clock.today() != self.today:
+            self._capture_day = day  # pin it: never redirect a click to another day
+        self.refreshDate()
+        return day
+
     def _capture_failed(self, target: str, error: Exception) -> bool:
-        stale = isinstance(error, ConflictError)
+        # A held lock is not an edit conflict; its message carries the next step.
+        stale = isinstance(error, ConflictError) and not isinstance(error, LockedError)
         text = ("Não salvo: " if not stale else "Conflito, nada foi salvo: ") + str(error)
         self._feedback = {"target": target, "text": text, "error": True}
         if self.session:
@@ -232,13 +287,14 @@ class WorkspaceController(QObject):
     def setCheckin(self, habit_id: str, state: str, expected: str) -> bool:
         if not self.session or self._guard_studio() or self.capture_day is None:
             return False
+        day = self._capture_target()
         try:
             result = CaptureService(self.session).set_checkin(
                 UUID(habit_id),
-                self.capture_day,
+                day,
                 state or None,
                 today=self.today,
-                recorded_at=datetime.now().astimezone(),
+                recorded_at=self.clock.now(),
                 expected=json.loads(expected),
             )
         except (ValueError, OSError) as error:
@@ -248,19 +304,20 @@ class WorkspaceController(QObject):
             result.action, "Check-in salvo"
         )
         return self._captured(
-            habit_id, f"{verb} · {long_date(self.capture_day)} · {label}. Arquivo diário canônico."
+            habit_id, f"{verb} · {long_date(day)} · {label}. Arquivo diário canônico."
         )
 
     def _observe(self, field_id: str, block_id: str, value, expected: str) -> bool:
         if not self.session or self._guard_studio() or self.capture_day is None:
             return False
+        day = self._capture_target()
         try:
             result = CaptureService(self.session).set_observation(
                 UUID(field_id),
-                self.capture_day,
+                day,
                 value,
                 today=self.today,
-                recorded_at=datetime.now().astimezone(),
+                recorded_at=self.clock.now(),
                 source_period=self.navigation.period_ref,
                 source_block_id=UUID(block_id) if block_id else None,
                 expected=json.loads(expected),
@@ -272,7 +329,7 @@ class WorkspaceController(QObject):
             "cleared": "Valor removido",
             "updated": "Valor corrigido",
         }.get(result.action, "Valor salvo")
-        return self._captured(field_id, f"{verb} · {long_date(self.capture_day)}.")
+        return self._captured(field_id, f"{verb} · {long_date(day)}.")
 
     @Slot(str, str, str, str, result=bool)
     def saveObservation(self, field_id: str, block_id: str, text: str, expected: str) -> bool:
@@ -430,7 +487,7 @@ class WorkspaceController(QObject):
             self._publish()
             return False
         except (ValueError, OSError) as error:
-            stale = isinstance(error, ConflictError)
+            stale = isinstance(error, ConflictError) and not isinstance(error, LockedError)
             self._habit_form = form | {
                 "error": (
                     "O arquivo do hábito mudou fora do aplicativo; cancele e reabra para revisar. "
@@ -724,7 +781,7 @@ class WorkspaceController(QObject):
 
     @Slot()
     def goToday(self):
-        self.today = date.today()
+        self.today = self.clock.today()
         self.navigate(
             self.navigation.view if self.navigation.period else "day", self.today.isoformat()
         )
@@ -759,7 +816,7 @@ class WorkspaceController(QObject):
             failures = []
             self.watcher.failed.connect(failures.append)
             try:
-                self.watcher.refresh()
+                self.watcher.refresh(force=True)
             finally:
                 self.watcher.failed.disconnect(failures.append)
             if not failures:
@@ -913,5 +970,6 @@ class WorkspaceController(QObject):
                 self._notice_message("O gerenciador de arquivos não pôde ser aberto.", True)
 
     def close(self):
+        self.date_timer.stop()
         if self.watcher:
             self.watcher.stop()

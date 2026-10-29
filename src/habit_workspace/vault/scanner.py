@@ -1,7 +1,8 @@
 """Discover supported Markdown anywhere in the vault; never choose a duplicate winner."""
 
 import os
-from collections import defaultdict
+import threading
+from collections import OrderedDict, defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 from uuid import UUID
@@ -59,6 +60,57 @@ class ScanReport:
     defaults: tuple[LoadedDefaults, ...] = ()
 
 
+class _ParsedCache:
+    """Reuse parsed documents for byte-identical files between scans.
+
+    Every scan still reads and hashes every file, so change detection is unchanged;
+    only the YAML parse of unchanged bytes is skipped. Entries are keyed by SHA-256
+    and verified against the exact bytes. Documents in a report are read-only by
+    contract (writers deep-copy first); a cached document whose metadata or body was
+    mutated anyway no longer equals its parse signature and is parsed again.
+    """
+
+    def __init__(self, limit_bytes: int = 64 * 1024 * 1024):
+        self.limit = limit_bytes
+        self.size = 0
+        self.entries: OrderedDict[str, Document] = OrderedDict()
+        self.lock = threading.Lock()
+
+    def decode(self, raw: bytes, digest: str) -> Document:
+        with self.lock:
+            cached = self.entries.get(digest)
+            if cached is not None:
+                self.entries.move_to_end(digest)
+        if (
+            cached is not None
+            and cached.original_bytes == raw
+            and (cached.metadata, cached.body) == cached.original_signature
+        ):
+            return cached
+        document = decode(raw)
+        with self.lock:
+            if digest in self.entries:
+                self.size -= len(self.entries.pop(digest).original_bytes)
+            self.entries[digest] = document
+            self.size += len(raw)
+            while self.size > self.limit and self.entries:
+                self.size -= len(self.entries.popitem(last=False)[1].original_bytes)
+        return document
+
+
+PARSED = _ParsedCache()
+
+
+def fingerprint(report: ScanReport) -> tuple:
+    """Everything the index and the UI derive from: file identities, revisions, issues."""
+    return (
+        tuple((d.path, d.revision) for d in report.documents),
+        tuple((d.path, d.revision) for d in report.layouts),
+        tuple((d.path, d.revision) for d in report.defaults),
+        report.invalid,
+    )
+
+
 def scan(root: Path) -> ScanReport:
     documents, invalid, directories = [], [], []
     by_id = defaultdict(list)
@@ -95,7 +147,7 @@ def scan(root: Path) -> ScanReport:
                         layouts.append(loaded_layout)
                         revisions[(parsed.layout.id, parsed.layout.version)].append(loaded_layout)
                     continue
-                loaded = LoadedDocument(path, decode(raw), revision)
+                loaded = LoadedDocument(path, PARSED.decode(raw, revision.digest), revision)
                 documents.append(loaded)
                 by_id[loaded.document.id].append(loaded)
             except (DocumentError, OSError) as error:

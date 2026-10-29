@@ -16,4 +16,9 @@ artifacts.
 - Phase 6: tracking mode on period pages with habit create/edit form, idempotent
   habit check-ins and typed field observations in the canonical day file, stale
   external-edit detection, and GUI acceptance script `tools/verify_phase6.py`.
+- Phase 6.5A (stability): local date follows midnight/suspend via an injectable
+  clock; tracking labels when the selected day had another layout revision;
+  scans reuse parses of byte-identical files and skip redundant index rebuilds and
+  UI refreshes; writer locks record a diagnostic owner, with `vault lock-status`
+  and verified-only `vault unlock --token`. Benchmark: `tools/benchmark_vault.py`.
 - Chart rendering and distribution workflows remain unimplemented.

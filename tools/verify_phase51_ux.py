@@ -50,7 +50,8 @@ def verify(reopen=None):
     with TemporaryDirectory() as temporary:
         base = Path(temporary)
         controller = harness.controllers.WorkspaceController(
-            settings=QSettings(str(base / "prefs"), QSettings.IniFormat), today=harness.DAY
+            settings=QSettings(str(base / "prefs"), QSettings.IniFormat),
+            clock=harness.FrozenClock(),
         )
         ui = harness.Interface(app, controller)
         if reopen:

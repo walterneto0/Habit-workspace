@@ -9,7 +9,7 @@ from habit_workspace.indexing.cache import IndexCache
 from habit_workspace.vault.atomic_io import ConflictError, writer_lock
 from habit_workspace.vault.manager import VaultInfo, VaultManager
 from habit_workspace.vault.repositories import DocumentRepository
-from habit_workspace.vault.scanner import LoadedDocument, ScanReport, scan
+from habit_workspace.vault.scanner import LoadedDocument, ScanReport, fingerprint, scan
 
 
 class VaultSession:
@@ -19,6 +19,7 @@ class VaultSession:
         self.repository = DocumentRepository(self.root)
         self.index = IndexCache(self.root)
         self.index_error: str | None = None
+        self._indexed: tuple | None = None
         self.report = self.scan()
 
     @classmethod
@@ -29,12 +30,23 @@ class VaultSession:
     def open(cls, directory: Path) -> VaultSession:
         return cls(VaultManager.open(directory))
 
+    def request_index_rebuild(self) -> None:
+        """Make the next scan rebuild the index even if no file changed (reindex)."""
+        self._indexed = None
+
     def scan(self) -> ScanReport:
+        """Always re-read files. Rebuild the index when they changed, it is missing,
+        failed before, or a rebuild was requested."""
         report = scan(self.root)
         self.report = report
+        current = fingerprint(report)
+        if current == self._indexed and self.index_error is None and self.index.path.is_file():
+            return report
+        self._indexed = None
         try:
             self.index.rebuild(report)
             self.index_error = None
+            self._indexed = current
         except (sqlite3.Error, OSError, DocumentError) as error:
             # Files remain authoritative and readable even if the cache is unavailable.
             self.index_error = f"Index unavailable; canonical files are intact: {error}"
