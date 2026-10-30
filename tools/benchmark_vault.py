@@ -263,6 +263,8 @@ def main() -> int:
     parser.add_argument("--sizes", default="small,medium,large")
     parser.add_argument("--repeat", type=int, default=5)
     parser.add_argument("--json", type=Path)
+    parser.add_argument("--gui", action="store_true", help="Measure a rendered Qt Quick window")
+    parser.add_argument("--profile", type=Path, help="Write cProfile scan diagnostics")
     args = parser.parse_args()
     report = {
         "environment": dict(
@@ -279,7 +281,22 @@ def main() -> int:
             started = time.perf_counter()
             info = generate(root, size)
             generated = round(time.perf_counter() - started, 1)
-            results = measure(root, info, args.repeat, Path(temporary) / f"{size}.ini")
+            if args.gui:
+                from benchmark_gui import measure_gui
+
+                results = measure_gui(root, info, args.repeat, Path(temporary) / f"{size}.ini")
+            else:
+                results = measure(root, info, args.repeat, Path(temporary) / f"{size}.ini")
+            if args.profile:
+                import cProfile
+                import pstats
+
+                from habit_workspace.vault.scanner import scan
+
+                profiler = cProfile.Profile()
+                profiler.runcall(scan, root)
+                with args.profile.open("w") as stream:
+                    pstats.Stats(profiler, stream=stream).sort_stats("cumulative").print_stats(45)
             info = {k: v for k, v in info.items() if k not in ("habit_ids", "field_id")}
             report["results"][size] = dict(vault=info, generate_s=generated, timings=results)
             print(f"\n== {size}: {info}", flush=True)

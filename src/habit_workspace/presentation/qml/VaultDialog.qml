@@ -41,6 +41,10 @@ Dialog {
         }
     }
     onOpened: directory.forceActiveFocus()
+    Connections {
+        target: dialog.backend ? dialog.backend.captureActions : null
+        function onOpened(ok) { if (ok) dialog.close(); }
+    }
     contentItem: ScrollView {
         contentWidth: availableWidth
         clip: true
@@ -124,14 +128,13 @@ Dialog {
                 objectName: "vault-submit"
                 Layout.fillWidth: true
                 primary: true
-                enabled: directory.text.trim().length > 0 && (!dialog.creating || vaultName.text.trim().length > 0)
-                text: dialog.creating ? qsTr("Criar cofre nesta pasta") : qsTr("Abrir cofre")
+                enabled: !dialog.modelState.openingVault && directory.text.trim().length > 0 && (!dialog.creating || vaultName.text.trim().length > 0)
+                text: dialog.modelState.openingVault ? qsTr("Abrindo…") : dialog.creating ? qsTr("Criar cofre nesta pasta") : qsTr("Abrir cofre")
                 onClicked: {
                     if (!enabled)
                         return;
-                    const ok = dialog.creating ? dialog.backend.createVault(directory.text, vaultName.text) : dialog.backend.openVault(directory.text);
-                    if (ok)
-                        dialog.close();
+                    if (dialog.creating) dialog.backend.captureActions.createVault(directory.text, vaultName.text);
+                    else dialog.backend.captureActions.openVault(directory.text);
                 }
             }
             UiText {
@@ -151,8 +154,7 @@ Dialog {
                     glyph: "folder"
                     quiet: true
                     onClicked: {
-                        if (dialog.backend.openVault(modelData))
-                            dialog.close();
+                        dialog.backend.captureActions.openVault(modelData);
                     }
                 }
             }

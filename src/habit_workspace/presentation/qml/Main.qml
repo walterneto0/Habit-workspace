@@ -256,7 +256,7 @@ ApplicationWindow {
                                 }
                                 UiText {
                                     Layout.fillWidth: true
-                                    text: window.modelState.period ? window.modelState.range : window.modelState.view === "overview" ? (window.modelState.hasVault ? qsTr("Seu planejamento, no seu tempo.  ·  ") + window.modelState.todayLabel : qsTr("Planeje com calma. Mantenha seus arquivos por perto.")) : window.modelState.view === "notes" ? qsTr("Documentos e notas do seu cofre, organizados por título e tags.") : window.modelState.view === "habits" ? qsTr("Definições canônicas · escopo, recorrência e tags.") : window.modelState.view === "settings" ? qsTr("Ajuste seu espaço de trabalho.") : qsTr("Uma visão do que importa, com dados do seu cofre.")
+                                    text: window.modelState.period ? window.modelState.range : window.modelState.view === "overview" ? (window.modelState.hasVault ? qsTr("Seu planejamento, no seu tempo.  ·  ") + window.modelState.todayLabel : qsTr("Planeje com calma. Mantenha seus arquivos por perto.")) : window.modelState.view === "notes" ? qsTr("Documentos e notas do seu cofre, organizados por título e tags.") : window.modelState.view === "habits" ? qsTr("Sua rotina · frequência, período e tags.") : window.modelState.view === "settings" ? qsTr("Ajuste seu espaço de trabalho.") : qsTr("Uma visão do que importa, com dados do seu cofre.")
                                     color: Theme.secondary
                                     lineHeight: 1.3
                                 }
@@ -433,12 +433,6 @@ ApplicationWindow {
                                     }
                                 }
                             }
-                            PeriodBrowser {
-                                Layout.fillWidth: true
-                                backend: window.backend
-                                modelState: window.modelState
-                                visible: !!window.modelState.period
-                            }
                             ColumnLayout {
                                 Layout.fillWidth: true
                                 visible: window.modelState.hasVault && !!window.modelState.period
@@ -452,7 +446,7 @@ ApplicationWindow {
                                     Layout.fillWidth: true
                                     UiText { Layout.fillWidth: true; text: qsTr("Layout ativo desde: ") + (window.modelState.composition.activation || ""); color: Theme.secondary }
                                     ActionButton {
-                                        text: qsTr("Editar layout no Studio")
+                                        text: qsTr("Personalizar página")
                                         objectName: "open-layout-studio"
                                         onClicked: window.backend.layoutStudio.open()
                                     }
@@ -466,11 +460,18 @@ ApplicationWindow {
                                     feedback: (window.modelState.tracking || {}).feedback || ({})
                                     blocks: window.modelState.composition.blocks || []
                                     gridColumns: window.modelState.composition.columns || 1
-                                    onCheckin: (habitId, state, token) => window.backend.setCheckin(habitId, state, token)
-                                    onObserve: (fieldId, blockId, text, token) => window.backend.saveObservation(fieldId, blockId, text, token)
-                                    onObserveBoolean: (fieldId, blockId, value, token) => window.backend.setBooleanObservation(fieldId, blockId, value, token)
-                                    onClearValue: (fieldId, token) => window.backend.clearObservation(fieldId, token)
+                                    onDetails: (identifier) => window.backend.showHabit(identifier)
+                                    onCheckin: (habitId, state, token) => window.backend.captureActions.setCheckin(habitId, state, token)
+                                    onObserve: (fieldId, blockId, text, token) => window.backend.captureActions.saveObservation(fieldId, blockId, text, token)
+                                    onObserveBoolean: (fieldId, blockId, value, token) => window.backend.captureActions.setBooleanObservation(fieldId, blockId, value, token)
+                                    onClearValue: (fieldId, token) => window.backend.captureActions.clearObservation(fieldId, token)
                                 }
+                            }
+                            PeriodBrowser {
+                                Layout.fillWidth: true
+                                backend: window.backend
+                                modelState: window.modelState
+                                visible: !!window.modelState.period
                             }
                             Input {
                                 id: search

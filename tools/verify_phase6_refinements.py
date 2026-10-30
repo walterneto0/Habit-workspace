@@ -58,6 +58,12 @@ class Interface:
 
     def settle(self):
         QTest.qWait(210)
+        from benchmark_gui import wait
+
+        wait(
+            self.app,
+            lambda: not self.controller.actions.busy and not self.controller.actions.opening,
+        )
         assert not self.errors, self.errors
 
     def walk(self, item=None):

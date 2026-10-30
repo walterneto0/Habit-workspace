@@ -58,7 +58,13 @@ Direção: [phase-6-5-direction.md](docs/planning/phase-6-5-direction.md).
   ([relatório 6.5A](docs/verification/phase-6-5a-stability.md)). Virada do dia,
   política de layout histórico, medição/correção de desempenho de varredura e
   diagnóstico/recuperação segura de bloqueios.
-- **6.5B — Integração e usabilidade**: não iniciada. A versão 6.5 não está completa.
+- **6.5B — Integração e usabilidade**: implementada e localmente verificada;
+  pronta para revisão do responsável
+  ([relatório 6.5B](docs/verification/phase-6-5b-ux-integration.md)). Criação e
+  captura direta de hábitos, integração com layouts, abertura assíncrona de cofre,
+  integridade de persistência e jornada Qt foram verificadas. Resultados de
+  desempenho, limitações e plataformas ainda não verificadas constam no relatório.
+  Nenhuma funcionalidade da Fase 7 foi iniciada.
 
 ## Fase 7 — Agenda, notas, imagens e planejamento
 Tarefas, objetivos, avaliações, eventos e notas; bloco de texto Markdown com marcador por ID, imagens em Assets; agenda referenciando dados canônicos.

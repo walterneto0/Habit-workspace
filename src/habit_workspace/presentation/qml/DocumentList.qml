@@ -144,6 +144,12 @@ ColumnLayout {
                 UiText { objectName: "habit-detail-status"; Layout.fillWidth: true; text: (parent.habit.date || "") + " · " + (parent.habit.stateLabel || ""); color: Theme.secondary }
                 UiText { Layout.fillWidth: true; visible: !!parent.habit.note; text: parent.habit.note || ""; color: Theme.warning }
                 ActionButton {
+                    objectName: "habit-detail-track"
+                    text: listing.modelState.selected.returnLabel || qsTr("Acompanhar nesta data")
+                    enabled: !!listing.modelState.selected.canTrack
+                    onClicked: listing.backend.returnToTracking()
+                }
+                ActionButton {
                     objectName: "habit-detail-edit"
                     text: qsTr("Editar hábito")
                     onClicked: listing.backend.editHabit(listing.modelState.selected.id)

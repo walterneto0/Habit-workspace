@@ -6,12 +6,14 @@ Usage: QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software \
 
 import argparse
 import json
+import threading
 from datetime import date
 from importlib.resources import files
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from uuid import uuid4
 
+from benchmark_gui import wait
 from PySide6.QtCore import QObject, QPointF, QSettings, Qt, QUrl
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtQml import QQmlApplicationEngine
@@ -101,8 +103,38 @@ def verify(output: Path) -> dict:
         window.setWidth(1200)
         window.setHeight(800)
         settle()
-        click(named("vault-submit"))
-        assert controller.state["hasVault"]
+        create_entered, release_create = threading.Event(), threading.Event()
+        create_descriptor = VaultSession.__dict__["create"]
+        create_method = VaultSession.create
+
+        def delayed_create(cls, directory, name):
+            create_entered.set()
+            assert release_create.wait(10), "test did not release the vault-create worker"
+            return create_method(directory, name)
+
+        VaultSession.create = classmethod(delayed_create)
+        try:
+            click(named("vault-submit"))
+            assert create_entered.wait(2), "vault-create worker did not start"
+            assert controller.state["openingVault"]
+            submit = named("vault-submit")
+            assert submit.property("text") == "Abrindo…"
+            assert not submit.isEnabled()
+            capture("create-dialog-loading")
+            release_create.set()
+            wait(
+                app,
+                lambda: (
+                    not controller.state["openingVault"]
+                    and (controller.state["hasVault"] or controller.state["noticeError"])
+                ),
+                timeout=10,
+            )
+        finally:
+            release_create.set()
+            VaultSession.create = create_descriptor
+        assert controller.state["hasVault"], f"Vault creation failed: {controller.state['notice']}"
+        wait(app, lambda: not dialog.property("visible"), timeout=5)
         assert not dialog.property("visible")
         capture("empty-vault")
         QTest.keyClick(window, Qt.Key.Key_B, Qt.KeyboardModifier.ControlModifier)
@@ -120,7 +152,10 @@ def verify(output: Path) -> dict:
         # Real pointer input through the calendar cell, then ISO-week navigation.
         controller.navigate("month", "2026-10-29")
         settle()
-        click(named("calendar-day-2026-10-29"))
+        calendar_day = named("calendar-day-2026-10-29")
+        calendar_day.forceActiveFocus(Qt.FocusReason.TabFocusReason)
+        settle()
+        click(calendar_day)
         assert controller.state["period"] == "day/2026-10-29"
         click(named("nav-week"))
         assert controller.state["period"] == "week/2026-W44"
@@ -140,7 +175,11 @@ def verify(output: Path) -> dict:
         QTest.keyClick(window, Qt.Key.Key_Space)
         settle()
         assert controller.state["period"] == "day/2026-11-08"
-        controller.navigate("year", "2026-10-29")
+        window.setWidth(1000)
+        window.setHeight(740)
+        settle()
+        click(named("nav-year"))
+        assert controller.state["period"] == "year/2026"
         capture("year-light", 1000, 740)
         controller.navigate("settings")
         capture("settings-light", 1200, 900)

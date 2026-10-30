@@ -86,6 +86,7 @@ class WorkspaceController(QObject):
         self.watcher: VaultWatcher | None = None
         self._selected = ""
         self._detail_day = self.today
+        self._return_context = None
         self._query = ""
         self._notice = ""
         self._notice_error = False
@@ -99,6 +100,9 @@ class WorkspaceController(QObject):
         from habit_workspace.presentation.layout_studio import LayoutStudio
 
         self.studio = LayoutStudio(self)
+        from habit_workspace.presentation.capture_actions import CaptureActions
+
+        self.actions = CaptureActions(self)
         self.date_timer = QTimer(self)
         self.date_timer.setInterval(self.DATE_CHECK_MS)
         self.date_timer.timeout.connect(self.refreshDate)
@@ -112,6 +116,10 @@ class WorkspaceController(QObject):
     @Property(QObject, constant=True)
     def layoutStudio(self):
         return self.studio
+
+    @Property(QObject, constant=True)
+    def captureActions(self):
+        return self.actions
 
     def _composition(self):
         if not self.session or not self.navigation.period:
@@ -159,7 +167,13 @@ class WorkspaceController(QObject):
         period = self.navigation.period_ref
         if not self.session or period is None:
             return {}
-        return date_state(period, self.capture_day, self.today) | {"feedback": self._feedback}
+        return date_state(period, self.capture_day, self.today) | {
+            "feedback": self._feedback
+            if self._feedback.get("date", self.capture_day.isoformat())
+            == self.capture_day.isoformat()
+            else {},
+            "saving": self.actions.busy,
+        }
 
     def _habits(self):
         """Canonical habits relevant to this period, shared by every period view.
@@ -189,6 +203,7 @@ class WorkspaceController(QObject):
             rows.append(
                 dict(
                     **habit_properties(habit),
+                    cell=cell_mapping(cell),
                     stateLabel=STATE_LABELS.get(cell.state, cell.state),
                     outside=sum(
                         r["habit_id"] == str(habit.id)
@@ -247,6 +262,7 @@ class WorkspaceController(QObject):
         # A held lock is not an edit conflict; its message carries the next step.
         stale = isinstance(error, ConflictError) and not isinstance(error, LockedError)
         text = ("Não salvo: " if not stale else "Conflito, nada foi salvo: ") + str(error)
+        self.actions.invalidate()
         self._feedback = {"target": target, "text": text, "error": True}
         if self.session:
             # Show the current canonical state after a rejected or stale edit.
@@ -255,6 +271,7 @@ class WorkspaceController(QObject):
         return False
 
     def _captured(self, target: str, text: str) -> bool:
+        self.actions.invalidate()
         self._feedback = {"target": target, "text": text, "error": False}
         self._notice_message(text)
         return True
@@ -285,7 +302,12 @@ class WorkspaceController(QObject):
 
     @Slot(str, str, str, result=bool)
     def setCheckin(self, habit_id: str, state: str, expected: str) -> bool:
-        if not self.session or self._guard_studio() or self.capture_day is None:
+        if (
+            self.actions.busy
+            or not self.session
+            or self._guard_studio()
+            or self.capture_day is None
+        ):
             return False
         day = self._capture_target()
         try:
@@ -308,7 +330,12 @@ class WorkspaceController(QObject):
         )
 
     def _observe(self, field_id: str, block_id: str, value, expected: str) -> bool:
-        if not self.session or self._guard_studio() or self.capture_day is None:
+        if (
+            self.actions.busy
+            or not self.session
+            or self._guard_studio()
+            or self.capture_day is None
+        ):
             return False
         day = self._capture_target()
         try:
@@ -417,7 +444,7 @@ class WorkspaceController(QObject):
 
     @Slot("QVariantMap", result=bool)
     def saveHabit(self, values) -> bool:
-        if not self.session or not self._habit_form or self._guard_studio():
+        if self.actions.busy or not self.session or not self._habit_form or self._guard_studio():
             return False
         period = self.navigation.period_ref or PeriodRef.containing("day", self._detail_day)
         form = dict(self._habit_form) | {
@@ -499,6 +526,7 @@ class WorkspaceController(QObject):
             }
             self._publish()
             return False
+        self.actions.invalidate()
         created = self._editing_habit is None
         self._habit_form, self._editing_habit = {}, None
         self._notice_message(
@@ -633,6 +661,10 @@ class WorkspaceController(QObject):
             row["fallback"] += (
                 f"\n{doc.title} · {hw['value_type']} · ativo desde {hw['active_from']}"
             )
+        row["canTrack"] = bool(self._return_context or row.get("habit", {}).get("editable"))
+        row["returnLabel"] = (
+            "Voltar ao acompanhamento" if self._return_context else "Acompanhar nesta data"
+        )
         row["excerpt"] = excerpt(doc.body)
         row["truncated"] = len(doc.body) > 6000
         row["records"] = []
@@ -674,6 +706,7 @@ class WorkspaceController(QObject):
             "habits": self._habits(),
             "habitForm": self._habit_form,
             "hasVault": self.session is not None,
+            "openingVault": self.actions.opening,
             "vaultName": self.session.info.name if self.session else "Seu espaço pessoal",
             "vaultPath": str(self.session.root) if self.session else "",
             "recentVaults": recent,
@@ -709,10 +742,12 @@ class WorkspaceController(QObject):
             self.watcher.deleteLater()
         self.session = session
         self._selected, self._query = "", ""
+        self._return_context = None
         self._pending, self._preview = None, {}
         self._capture_day, self._feedback, self._habit_form = None, {}, {}
         self.navigation.view = "overview"
-        self.watcher = VaultWatcher(session, self)
+        self.actions.attach(session)
+        self.watcher = VaultWatcher(session, self, request_refresh=self.actions.tasks.refresh)
         self.watcher.refreshed.connect(lambda _report: self._publish())
         self.watcher.failed.connect(
             lambda message: self._notice_message(
@@ -727,6 +762,9 @@ class WorkspaceController(QObject):
 
     @Slot(str, str, result=bool)
     def createVault(self, directory: str, name: str) -> bool:
+        if self.actions.busy:
+            self._notice_message("Aguarde o registro terminar de salvar antes de trocar de cofre.")
+            return False
         if self._guard_studio():
             return False
         try:
@@ -740,6 +778,9 @@ class WorkspaceController(QObject):
 
     @Slot(str, result=bool)
     def openVault(self, directory: str) -> bool:
+        if self.actions.busy:
+            self._notice_message("Aguarde o registro terminar de salvar antes de trocar de cofre.")
+            return False
         if self._guard_studio():
             return False
         try:
@@ -805,6 +846,26 @@ class WorkspaceController(QObject):
         self._selected = identifier
         self._publish()
 
+    @Slot(str)
+    def showHabit(self, identifier):
+        if self.navigation.period:
+            self._return_context = (self.navigation.view, self.navigation.anchor, self.capture_day)
+            self._detail_day = self.capture_day
+        self.navigate("habits")
+        self.selectDocument(identifier)
+
+    @Slot()
+    def returnToTracking(self):
+        if self._return_context:
+            view, anchor, day = self._return_context
+            self.navigate(view, anchor.isoformat())
+            self.setCaptureDate(day.isoformat())
+            self._return_context = None
+        elif self._selected:
+            selected = self._selection(self._entries())
+            if selected.get("habit", {}).get("editable"):
+                self.navigate("day", self._detail_day.isoformat())
+
     @Slot()
     def clearSelection(self):
         self._selected = ""
@@ -812,6 +873,7 @@ class WorkspaceController(QObject):
 
     @Slot()
     def reindex(self):
+        self.actions.invalidate()
         if self.watcher:
             failures = []
             self.watcher.failed.connect(failures.append)
@@ -888,6 +950,9 @@ class WorkspaceController(QObject):
 
     @Slot(result=bool)
     def confirmImport(self) -> bool:
+        if self.actions.busy:
+            return False
+        self.actions.invalidate()
         if self._guard_studio():
             return False
         if not self.session or not self._pending or self._preview.get("conflict"):
@@ -971,5 +1036,6 @@ class WorkspaceController(QObject):
 
     def close(self):
         self.date_timer.stop()
+        self.actions.close()
         if self.watcher:
             self.watcher.stop()

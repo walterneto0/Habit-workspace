@@ -14,6 +14,7 @@ GridLayout {
     property bool tracking: false
     property var feedback: ({})
     signal selectedBlock(int index)
+    signal details(string identifier)
     signal checkin(string habitId, string state, string token)
     signal observe(string fieldId, string blockId, string text, string token)
     signal observeBoolean(string fieldId, string blockId, string value, string token)
@@ -129,6 +130,7 @@ GridLayout {
                         blockId: card.modelData.id || ""
                         showName: card.cells.length > 1 || (card.cells[index] || {}).name !== card.modelData.title
                         feedback: root.feedback
+                        onDetails: (identifier) => root.details(identifier)
                         onCheckin: (habitId, state, token) => root.checkin(habitId, state, token)
                         onObserve: (fieldId, blockId, text, token) => root.observe(fieldId, blockId, text, token)
                         onObserveBoolean: (fieldId, blockId, value, token) => root.observeBoolean(fieldId, blockId, value, token)

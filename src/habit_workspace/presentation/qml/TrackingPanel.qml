@@ -106,12 +106,12 @@ ColumnLayout {
             UiText {
                 Layout.fillWidth: true
                 visible: (root.habits.rows || []).length === 0
-                text: root.habits.error || qsTr("Nenhum hábito ativo neste período. Crie um e vincule-o a uma checklist no Layout Studio.")
+                text: root.habits.error || qsTr("Crie seu primeiro hábito. Depois, use Concluir para registrar o dia selecionado.")
                 color: root.habits.error ? Theme.error : Theme.secondary
             }
             Repeater {
-                model: root.showDefinitions ? (root.habits.rows || []) : []
-                delegate: RowLayout {
+                model: root.habits.rows || []
+                delegate: ColumnLayout {
                     id: habitRow
                     required property var modelData
                     Layout.fillWidth: true
@@ -122,6 +122,7 @@ ColumnLayout {
                         UiText { Layout.fillWidth: true; text: habitRow.modelData.name; font.weight: Font.Medium }
                         UiText {
                             Layout.fillWidth: true
+                            visible: root.showDefinitions
                             text: habitRow.modelData.recurrence + " · " + habitRow.modelData.scope + (habitRow.modelData.tags ? " · #" + habitRow.modelData.tags.split(", ").join(" #") : "")
                             color: Theme.secondary
                             font.pixelSize: 12
@@ -133,11 +134,44 @@ ColumnLayout {
                             font.pixelSize: 12
                         }
                     }
-                    ActionButton {
-                        objectName: "edit-habit-" + habitRow.modelData.id
-                        text: qsTr("Editar")
-                        hint: qsTr("Editar nome, tags, escopo e recorrência de ") + habitRow.modelData.name
-                        onClicked: root.backend.editHabit(habitRow.modelData.id)
+                    Flow {
+                        Layout.fillWidth: true
+                        spacing: 6
+                        ActionButton {
+                            objectName: "quick-complete-" + habitRow.modelData.id
+                            text: habitRow.modelData.cell.recorded === "done" ? qsTr("Concluído") : qsTr("Concluir")
+                            selected: habitRow.modelData.cell.recorded === "done"
+                            enabled: !!habitRow.modelData.cell.editable && !root.tracking.saving
+                            Accessible.name: habitRow.modelData.name + " · " + root.tracking.label + " · " + text
+                            onClicked: root.backend.captureActions.setCheckin(habitRow.modelData.id, "done", habitRow.modelData.cell.token)
+                        }
+                        ActionButton {
+                            objectName: "quick-clear-" + habitRow.modelData.id
+                            text: qsTr("Limpar registro")
+                            visible: !!habitRow.modelData.cell.recorded
+                            enabled: !!habitRow.modelData.cell.editable && !root.tracking.saving
+                            onClicked: root.backend.captureActions.setCheckin(habitRow.modelData.id, "", habitRow.modelData.cell.token)
+                        }
+                        ActionButton {
+                            objectName: "habit-details-" + habitRow.modelData.id
+                            text: qsTr("Ver detalhes")
+                            onClicked: root.backend.showHabit(habitRow.modelData.id)
+                        }
+                        ActionButton {
+                            objectName: "edit-habit-" + habitRow.modelData.id
+                            visible: root.showDefinitions
+                            text: qsTr("Editar hábito")
+                            enabled: !root.tracking.saving
+                            onClicked: root.backend.editHabit(habitRow.modelData.id)
+                        }
+                    }
+                    UiText {
+                        objectName: "quick-feedback-" + habitRow.modelData.id
+                        Layout.fillWidth: true
+                        visible: (root.tracking.feedback || {}).target === habitRow.modelData.id
+                        text: visible ? root.tracking.feedback.text : ""
+                        color: root.tracking.feedback && root.tracking.feedback.error ? Theme.error : Theme.secondary
+                        Accessible.role: Accessible.AlertMessage
                     }
                 }
             }

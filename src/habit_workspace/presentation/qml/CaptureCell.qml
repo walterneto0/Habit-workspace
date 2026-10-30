@@ -14,10 +14,12 @@ ColumnLayout {
     readonly property string valueType: cell.valueType || ""
     readonly property string current: cell.value || ""
     readonly property bool mine: feedback.target === cell.id
+    signal details(string identifier)
     signal checkin(string habitId, string state, string token)
     signal observe(string fieldId, string blockId, string text, string token)
     signal observeBoolean(string fieldId, string blockId, string value, string token)
     signal clearValue(string fieldId, string token)
+    enabled: !feedback.saving
     spacing: 6
     onCurrentChanged: valueInput.text = current
     Component.onCompleted: valueInput.text = current
@@ -55,6 +57,12 @@ ColumnLayout {
             color: Theme.secondary
             font.pixelSize: 12
         }
+    }
+    ActionButton {
+        objectName: "capture-details-" + root.cell.id
+        visible: root.habit && !!root.cell.editable
+        text: qsTr("Ver detalhes")
+        onClicked: root.details(root.cell.id)
     }
     Flow {
         Layout.fillWidth: true
@@ -159,7 +167,7 @@ ColumnLayout {
         Layout.fillWidth: true
         visible: root.mine
         text: root.mine ? root.feedback.text : ""
-        color: root.feedback.error ? Theme.error : Theme.success
+        color: root.feedback.error ? Theme.error : root.feedback.saving ? Theme.secondary : Theme.success
         font.pixelSize: 12
         Accessible.role: Accessible.AlertMessage
     }
