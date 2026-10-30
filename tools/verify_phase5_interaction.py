@@ -8,7 +8,7 @@ from importlib.resources import files
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from PySide6.QtCore import QEvent, QPointF, QSettings, Qt, QThreadPool, QUrl
+from PySide6.QtCore import QEvent, QObject, QPointF, QSettings, Qt, QThreadPool, QUrl
 from PySide6.QtGui import QGuiApplication, QKeyEvent
 from PySide6.QtQml import QQmlApplicationEngine
 from PySide6.QtQuickControls2 import QQuickStyle
@@ -75,8 +75,38 @@ def verify():
             assert item.isEnabled(), name
             p = point(item)
             assert 0 <= p.x() < window.width() and 0 <= p.y() < window.height(), (name, p)
+            before = controller.state
             QTest.mouseClick(window, Qt.LeftButton, Qt.NoModifier, p)
             settle()
+            if name == "nav-week":
+                after = controller.state
+                if after["period"] != "week/2026-W44":
+                    popup_states = [
+                        (i.objectName(), i.isVisible())
+                        for i in walk(window.contentItem())
+                        if i.objectName() in ("vault-dialog", "nav-week")
+                    ]
+                    raise AssertionError(
+                        "nav-week pointer event did not navigate: "
+                        f"before={before['view']}/{before['period']!r}, "
+                        f"after={after['view']}/{after['period']!r}, "
+                        f"button=(x={p.x()}, y={p.y()}, width={item.width()}, "
+                        f"height={item.height()}, visible={item.isVisible()}, "
+                        f"enabled={item.isEnabled()}, active={window.isActive()}, "
+                        f"contains_center={item.contains(item.mapFromScene(p))}), "
+                        f"vault_dialog_visible={vault_popup.property('visible')}, "
+                        f"popups={popup_states}"
+                    )
+
+        def wait_for_vault_dialog_closed():
+            popup = window.findChild(QObject, "vault-dialog")
+            assert popup is not None, "vault dialog QObject is unavailable"
+            for _ in range(50):
+                if not popup.property("visible"):
+                    return popup
+                QTest.qWait(10)
+            assert not popup.property("visible"), "vault dialog exit transition did not finish"
+            return popup
 
         def type_text(name, text):
             item = reveal(named(name))
@@ -130,6 +160,11 @@ def verify():
         type_text("vault-directory", str(base / "vault"))
         click("vault-submit")
         assert controller.state["hasVault"]
+        # The modal overlay remains active for VaultDialog's 150 ms exit
+        # transition. Wait for the popup itself to finish closing before the
+        # next real pointer event; an 80 ms generic settle can send nav-week's
+        # click into that still-modal overlay on a loaded CI runner.
+        vault_popup = wait_for_vault_dialog_closed()
         click("nav-week")
         assert controller.state["period"] == "week/2026-W44"
         click("open-layout-studio")
@@ -305,6 +340,7 @@ def verify():
         settle()
         type_text("vault-directory", str(base / "vault"))
         click("vault-submit")
+        vault_popup = wait_for_vault_dialog_closed()
         click("nav-week")
         assert controller.state["composition"]["blocks"] == expected
         capture("reopened")
