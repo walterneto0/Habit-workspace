@@ -69,6 +69,9 @@ def verify():
 
         def settle():
             QTest.qWait(80)
+            from benchmark_gui import wait
+
+            wait(app, lambda: not controller.actions.busy and not controller.actions.opening)
             assert not errors, errors
 
         def walk(item):

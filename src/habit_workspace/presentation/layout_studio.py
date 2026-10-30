@@ -333,6 +333,9 @@ class LayoutStudio(QObject):
 
     @Slot()
     def open(self):
+        if self.workspace.actions.busy:
+            self.workspace._notice_message("Aguarde o registro terminar de salvar.")
+            return
         if self.draft or not self.workspace.session or not self.workspace.navigation.period:
             return
         try:

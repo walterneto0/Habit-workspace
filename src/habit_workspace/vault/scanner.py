@@ -201,9 +201,10 @@ def scan(root: Path) -> ScanReport:
         tuple(defaults),
     )
     missing = []
+    lookup = ReferenceLookup(report)
     for loaded in documents:
         for reference in loaded.document.references():
-            reason = reference_problem(report, reference)
+            reason = lookup.problem(reference)
             if reason:
                 missing.append(
                     MissingReference(
@@ -218,7 +219,7 @@ def scan(root: Path) -> ScanReport:
     for loaded in (*layouts, *defaults):
         identifier = loaded.layout.id if isinstance(loaded, LoadedLayout) else loaded.id
         for reference in loaded.references():
-            reason = reference_problem(report, reference)
+            reason = lookup.problem(reference)
             if reason:
                 missing.append(
                     MissingReference(
@@ -241,25 +242,41 @@ def scan(root: Path) -> ScanReport:
     )
 
 
+class ReferenceLookup:
+    """One scan-local identity table, including ambiguous and wrong-kind targets.
+
+    No persisted cache: rebuild from the complete report, so external edits,
+    duplicate identities and missing layout revisions keep their existing meaning.
+    """
+
+    def __init__(self, report: ScanReport):
+        self.conflicts = {c.document_id for c in report.conflicts}
+        self.documents = defaultdict(list)
+        self.layouts = defaultdict(list)
+        for loaded in report.documents:
+            self.documents[loaded.document.id].append(loaded.document)
+        for loaded in report.layouts:
+            self.layouts[(loaded.layout.id, loaded.layout.version)].append(loaded)
+
+    def problem(self, reference) -> str | None:
+        if reference.target_id in self.conflicts:
+            return "Referenced UUID is ambiguous"
+        if reference.role == "layout_id":
+            targets = self.layouts.get((reference.target_id, reference.version), ())
+            return None if len(targets) == 1 else "Referenced layout revision is missing or invalid"
+        targets = self.documents.get(reference.target_id, ())
+        if len(targets) != 1:
+            return "Referenced document is missing, invalid, or ambiguous"
+        expected = {
+            "habit_id": ("habit",),
+            "field_id": ("metric_definition",),
+            "note_id": ("note", "page", "year_page", "month_page", "week_page", "day_page"),
+            "source_id": ("habit", "metric_definition"),
+        }.get(reference.role)
+        if expected and targets[0].kind not in expected:
+            return f"Referenced document has wrong kind; expected {expected}"
+        return None
+
+
 def reference_problem(report: ScanReport, reference) -> str | None:
-    if any(c.document_id == reference.target_id for c in report.conflicts):
-        return "Referenced UUID is ambiguous"
-    if reference.role == "layout_id":
-        targets = [
-            d
-            for d in report.layouts
-            if d.layout.id == reference.target_id and d.layout.version == reference.version
-        ]
-        return None if len(targets) == 1 else "Referenced layout revision is missing or invalid"
-    targets = [d.document for d in report.documents if d.document.id == reference.target_id]
-    if len(targets) != 1:
-        return "Referenced document is missing, invalid, or ambiguous"
-    expected = {
-        "habit_id": ("habit",),
-        "field_id": ("metric_definition",),
-        "note_id": ("note", "page", "year_page", "month_page", "week_page", "day_page"),
-        "source_id": ("habit", "metric_definition"),
-    }.get(reference.role)
-    if expected and targets[0].kind not in expected:
-        return f"Referenced document has wrong kind; expected {expected}"
-    return None
+    return ReferenceLookup(report).problem(reference)
