@@ -13,6 +13,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from uuid import uuid4
 
+from benchmark_gui import wait
 from PySide6.QtCore import QPointF, QSettings, Qt, QUrl
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtQml import QQmlApplicationEngine
@@ -80,8 +81,11 @@ def verify():
     output.mkdir(parents=True, exist_ok=True)
     errors, checks, captures = [], [], []
     clock = ManualClock(local(2026, 10, 29, 23, 59))
-    with TemporaryDirectory() as temporary:
-        base = Path(temporary)
+    temporary = TemporaryDirectory()
+    controller = None
+    engine = None
+    try:
+        base = Path(temporary.name)
         habit = fixture(base / "vault")
         controller = WorkspaceController(
             settings=QSettings(str(base / "prefs"), QSettings.IniFormat), clock=clock
@@ -148,6 +152,19 @@ def verify():
         check("timer moved the followed day after midnight", "30 de outubro" in label)
         check("new day is today", label.endswith(" · hoje"))
         click(f"checkin-done-{habit}")
+        wait(
+            app,
+            lambda: (
+                not controller.actions.busy
+                and controller.state["tracking"]["feedback"].get("saving") is False
+            ),
+            timeout=10,
+        )
+        feedback = controller.state["tracking"]["feedback"]
+        check(
+            "pointer check-in completed successfully",
+            not feedback["error"] and "Salvo" in feedback["text"],
+        )
         records = [
             (r["date"], r["state"])
             for d in scan(base / "vault").documents
@@ -172,9 +189,17 @@ def verify():
                 if i.objectName() == "layout-notice" and i.isVisible()
             ],
         )
-        controller.close()
-        engine.deleteLater()
-        settle()
+    finally:
+        try:
+            if controller is not None:
+                controller.close()
+        finally:
+            try:
+                if engine is not None:
+                    engine.deleteLater()
+                    app.processEvents()
+            finally:
+                temporary.cleanup()
     result = {
         "result": "PASS",
         "platform": app.platformName(),
