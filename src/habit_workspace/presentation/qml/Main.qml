@@ -51,6 +51,8 @@ ApplicationWindow {
     }
     // Tab navigation must reveal controls below the viewport, including in dialogs.
     onActiveFocusItemChanged: Qt.callLater(ensureFocusVisible)
+    onWidthChanged: Qt.callLater(ensureFocusVisible)
+    onHeightChanged: Qt.callLater(ensureFocusVisible)
     function ensureFocusVisible() {
         const focused = activeFocusItem;
         if (!focused)
@@ -134,7 +136,7 @@ ApplicationWindow {
         onActivated: window.backend.clearSelection()
     }
 
-    onClosing: function(close) { if (backend.layoutStudio.state.active) { close.accepted = false; studioView.discard(); } }
+    onClosing: function(close) { if (modelState.planningForm && modelState.planningForm.open) { close.accepted = false; return; } if (backend.layoutStudio.state.active) { close.accepted = false; studioView.discard(); } }
 
     RowLayout {
         anchors.fill: parent
@@ -433,6 +435,12 @@ ApplicationWindow {
                                     }
                                 }
                             }
+                            PlanningPanel {
+                                Layout.fillWidth: true
+                                visible: window.modelState.hasVault && (!!window.modelState.period || window.modelState.view === "planning" || window.modelState.view === "overview")
+                                backend: window.backend
+                                modelState: window.modelState
+                            }
                             ColumnLayout {
                                 Layout.fillWidth: true
                                 visible: window.modelState.hasVault && !!window.modelState.period
@@ -457,6 +465,9 @@ ApplicationWindow {
                                     objectName: "tracking-composition"
                                     Layout.fillWidth: true
                                     tracking: true
+                                    planningBusy: !!window.modelState.planningSaving
+                                    onPlanningEdit: (identifier) => window.backend.planningActions.edit(identifier)
+                                    onPlanningComplete: (identifier, completed, token) => window.backend.planningActions.complete(identifier, completed, token)
                                     feedback: (window.modelState.tracking || {}).feedback || ({})
                                     blocks: window.modelState.composition.blocks || []
                                     gridColumns: window.modelState.composition.columns || 1
@@ -602,6 +613,7 @@ ApplicationWindow {
         backend: window.backend
         modelState: window.modelState
     }
+    PlanningDialog { backend: window.backend; modelState: window.modelState }
     HabitDialog {
         backend: window.backend
         modelState: window.modelState

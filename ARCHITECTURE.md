@@ -164,3 +164,14 @@ UI and chart rendering/rollups remain in later roadmap phases.
   diagnosticam e só removem um bloqueio comprovadamente órfão (mesma máquina/boot,
   processo inexistente ou PID reutilizado, conteúdo esperado e token confirmado).
   Varredura e captura continuam síncronas na thread da GUI; ver o relatório 6.5A.
+
+## Phase 7A planning
+
+`domain/planning.py` validates typed task/goal projections. `application/planning.py`
+patches complete round-trip Documents through the existing VaultSession and returns
+LoadedDocument revisions; queries project an existing ScanReport without I/O.
+`presentation/planning.py` holds only transient form drafts and dispatches explicit
+planning operations through VaultTasks. The worker owns its session, serializes
+capture/refresh/planning writes, and drains accepted writes on orderly shutdown.
+Task layout rows route to PlanningActions, never CaptureService. Goals have no
+implicit links or calculated progress. SQLite needs no new canonical tables.

@@ -222,9 +222,12 @@ def layout_references(layout: LayoutTemplate) -> tuple[Reference, ...]:
     refs = []
     for block in layout.walk():
         if block.binding:
-            role = {"metric": "field_id", "habit": "habit_id", "note": "note_id"}[
-                block.binding.kind
-            ]
+            role = {
+                "metric": "field_id",
+                "habit": "habit_id",
+                "note": "note_id",
+                "task": "task_id",
+            }[block.binding.kind]
             refs.append(Reference(block.binding.source_id, role))
         if isinstance(block.config, TableConfig):
             refs.extend(Reference(c.field_id, "field_id") for c in block.config.columns)

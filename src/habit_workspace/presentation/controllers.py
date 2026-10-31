@@ -40,6 +40,8 @@ from habit_workspace.vault.scanner import reference_problem
 from habit_workspace.vault.watcher import VaultWatcher
 
 KIND_LABELS = {
+    "task": "Tarefa",
+    "goal": "Objetivo",
     "note": "Nota",
     "page": "Página",
     "year_page": "Página anual",
@@ -103,6 +105,9 @@ class WorkspaceController(QObject):
         from habit_workspace.presentation.capture_actions import CaptureActions
 
         self.actions = CaptureActions(self)
+        from habit_workspace.presentation.planning import PlanningActions
+
+        self.planning = PlanningActions(self)
         self.date_timer = QTimer(self)
         self.date_timer.setInterval(self.DATE_CHECK_MS)
         self.date_timer.timeout.connect(self.refreshDate)
@@ -121,6 +126,10 @@ class WorkspaceController(QObject):
     def captureActions(self):
         return self.actions
 
+    @Property(QObject, constant=True)
+    def planningActions(self):
+        return self.planning
+
     def _composition(self):
         if not self.session or not self.navigation.period:
             return {}
@@ -135,7 +144,11 @@ class WorkspaceController(QObject):
             capture = CaptureSnapshot(self.session.report, self.capture_day, self.today)
             return dict(
                 blocks=composition(
-                    resolved.layout, self.session.report, self.session.root, capture=capture
+                    resolved.layout,
+                    self.session.report,
+                    self.session.root,
+                    capture=capture,
+                    period=self.navigation.period_ref,
                 ),
                 columns=resolved.layout.grid.columns,
                 issues=list(resolved.issues),
@@ -236,7 +249,7 @@ class WorkspaceController(QObject):
         if current == self.today:
             return False
         previous, self.today = self.today, current
-        busy = bool(self.studio.draft or self._habit_form or self._pending)
+        busy = bool(self.studio.draft or self._habit_form or self.planning.form or self._pending)
         if self._detail_day == previous:
             self._detail_day = current
         if self.navigation.anchor == previous and self._capture_day is None and not busy:
@@ -444,7 +457,13 @@ class WorkspaceController(QObject):
 
     @Slot("QVariantMap", result=bool)
     def saveHabit(self, values) -> bool:
-        if self.actions.busy or not self.session or not self._habit_form or self._guard_studio():
+        if (
+            self.actions.busy
+            or not self.session
+            or not self._habit_form
+            or self.planning.form
+            or self._guard_studio()
+        ):
             return False
         period = self.navigation.period_ref or PeriodRef.containing("day", self._detail_day)
         form = dict(self._habit_form) | {
@@ -545,6 +564,9 @@ class WorkspaceController(QObject):
         return True
 
     def _guard_studio(self):
+        if self.planning.form:
+            self._notice_message("Salve ou cancele a edição de planejamento antes de sair.", True)
+            return True
         if self.studio.draft:
             self.studio.message = "Salve ou descarte o rascunho antes de navegar."
             self.studio.changed.emit()
@@ -701,6 +723,9 @@ class WorkspaceController(QObject):
             ]
         recent = self.settings.value("recentVaults", [], type=list)
         state = {
+            "planning": self.planning.rows(),
+            "planningForm": self.planning.form,
+            "planningSaving": self.actions.busy,
             "composition": self._composition(),
             "tracking": self._tracking(),
             "habits": self._habits(),
@@ -741,6 +766,7 @@ class WorkspaceController(QObject):
             self.watcher.stop()
             self.watcher.deleteLater()
         self.session = session
+        self.planning.form, self.planning.loaded = {}, None
         self._selected, self._query = "", ""
         self._return_context = None
         self._pending, self._preview = None, {}

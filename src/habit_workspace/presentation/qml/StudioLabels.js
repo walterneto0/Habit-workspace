@@ -20,6 +20,6 @@ function compatible(kind, source) {
     if (kind === "note") return source.kind === "note";
     if (kind === "table") return source.kind === "metric_definition";
     if (kind === "chart") return source.kind === "habit" || source.kind === "metric_definition";
-    if (kind === "list") return source.kind === "habit" || source.kind === "metric_definition";
+    if (kind === "list") return source.kind === "task" || source.kind === "habit" || source.kind === "metric_definition";
     return false;
 }

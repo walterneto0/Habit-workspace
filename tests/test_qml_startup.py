@@ -125,3 +125,19 @@ def test_phase65a_rollover_and_historical_label_in_qml():
     assert '"result": "PASS"' in result.stdout
     assert '"qmlWarnings": []' in result.stdout
     assert "pointer check-in written to the new day" in result.stdout
+
+
+def test_phase7a_planning_pointer_keyboard_and_reopen():
+    from pathlib import Path
+
+    script = Path(__file__).resolve().parents[1] / "tools/verify_phase7a.py"
+    result = subprocess.run(
+        [sys.executable, str(script)],
+        env={**os.environ, "QT_QPA_PLATFORM": "offscreen", "QT_QUICK_BACKEND": "software"},
+        capture_output=True,
+        text=True,
+        timeout=90,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert '"result": "PASS"' in result.stdout
+    assert '"qmlWarnings": []' in result.stdout

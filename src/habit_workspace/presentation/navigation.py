@@ -79,6 +79,7 @@ class Navigation:
         return {
             "overview": "Visão geral",
             "notes": "Documentos e notas",
+            "planning": "Planejamento",
             "habits": "Hábitos",
             "statistics": "Estatísticas",
             "settings": "Configurações",
@@ -90,6 +91,7 @@ class Navigation:
             "overview",
             "calendar",
             "notes",
+            "planning",
             "habits",
             "statistics",
             "settings",
