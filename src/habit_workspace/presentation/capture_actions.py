@@ -174,6 +174,11 @@ class CaptureActions(QObject):
         if report is not None:
             w.session.report = report
             w.session.index_error = index_error
+        if kind.startswith("planning_"):
+            w.planning.completed(kind, error)
+            if report is not None:
+                w.watcher.accept_report(report)
+            return
         if kind != "refresh":
             if error:
                 text = (

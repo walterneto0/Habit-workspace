@@ -86,7 +86,7 @@ class SaveJob(QRunnable):
             )
 
 
-def composition(layout, report, root=None, draft_fields=None, capture=None):
+def composition(layout, report, root=None, draft_fields=None, capture=None, period=None):
     """capture: optional CaptureSnapshot that adds tracking-mode values per block."""
     rows = []
     draft_fields = draft_fields or {}
@@ -96,6 +96,9 @@ def composition(layout, report, root=None, draft_fields=None, capture=None):
         row["typeLabel"] = BLOCK_LABELS.get(block.type, block.type)
         row["title"] = block_title(block)
         row.update(row=position.row, column=position.column, detail="", bindingLabel="")
+        from habit_workspace.application.planning import block_rows
+
+        row["planning"] = block_rows(block, report, period, capture.today if capture else None)
         if capture is not None:
             from habit_workspace.presentation.tracking import cell_mapping
 
@@ -157,7 +160,7 @@ def composition(layout, report, root=None, draft_fields=None, capture=None):
             nested = LayoutTemplate(
                 uuid4(), 1, "Seção", block.config.children, grid=Grid(block.config.columns)
             )
-            row["children"] = composition(nested, report, root, draft_fields, capture)
+            row["children"] = composition(nested, report, root, draft_fields, capture, period)
         rows.append(row)
     return rows
 
@@ -251,7 +254,7 @@ class LayoutStudio(QObject):
                     type=d.document.metadata["hw"].get("value_type", ""),
                 )
                 for d in self.report.documents
-                if d.document.kind in ("metric_definition", "habit", "note")
+                if d.document.kind in ("metric_definition", "habit", "note", "task")
             ]
             + [
                 dict(
@@ -333,7 +336,7 @@ class LayoutStudio(QObject):
 
     @Slot()
     def open(self):
-        if self.workspace.actions.busy:
+        if self.workspace.actions.busy or self.workspace.planning.form:
             self.workspace._notice_message("Aguarde o registro terminar de salvar.")
             return
         if self.draft or not self.workspace.session or not self.workspace.navigation.period:
@@ -387,11 +390,18 @@ class LayoutStudio(QObject):
         )
 
     def source_info(self, source_id):
+        if any(str(c.document_id) == source_id for c in self.report.conflicts):
+            raise ValueError("UUID ambíguo; resolva o conflito antes de vincular.")
         field = self.source_field(source_id)
         if field:
             return field.id, field.name, "metric", field.value_type
         doc = next(d.document for d in self.report.documents if str(d.document.id) == source_id)
-        return doc.id, doc.title, doc.kind, "habit" if doc.kind == "habit" else "text"
+        return (
+            doc.id,
+            doc.title,
+            doc.kind,
+            doc.kind.value if doc.kind in ("habit", "task") else "text",
+        )
 
     @Slot(str, str, str, str)
     def add(self, kind, source_id="", name="", tags=""):
@@ -676,7 +686,7 @@ class LayoutStudio(QObject):
             )
         if key == "source":
             identifier, _, kind, actual = self.source_info(value)
-            if kind != "habit" and not (kind == "metric" and actual == "boolean"):
+            if kind not in ("habit", "task") and not (kind == "metric" and actual == "boolean"):
                 raise ValueError("Checklist exige hábitos ou campos booleanos.")
             ids = selection.source_ids if selection.mode == "manual" else ()
             types = tuple(dict.fromkeys((*selection.value_types, actual)))

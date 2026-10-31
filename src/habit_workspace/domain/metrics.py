@@ -200,7 +200,7 @@ class SourceSelection:
         object.__setattr__(self, "tags", normalize_tags(self.tags))
         check(
             isinstance(self.value_types, tuple)
-            and all(v in (*VALUE_TYPES, "habit") for v in self.value_types),
+            and all(v in (*VALUE_TYPES, "habit", "task") for v in self.value_types),
             "Invalid source types",
         )
         check(len(set(self.value_types)) == len(self.value_types), "Duplicate value types")

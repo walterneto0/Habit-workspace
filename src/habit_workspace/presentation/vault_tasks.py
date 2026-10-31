@@ -35,10 +35,27 @@ class _Job(QRunnable):
             if self.kind == "refresh":
                 if not opened:
                     session.scan()
-            else:
+            elif self.kind in ("planning_save", "planning_complete"):
+                from habit_workspace.application.planning import PlanningService
+
+                service = PlanningService(session)
+                args = dict(self.arguments)
+                if self.kind == "planning_complete":
+                    result = service.complete(**args)
+                else:
+                    loaded = args.pop("loaded")
+                    fields = args.pop("fields")
+                    result = (
+                        service.update(loaded, **fields)
+                        if loaded
+                        else service.create(**args, **fields)
+                    )
+            elif self.kind in ("checkin", "observation"):
                 service = CaptureService(session)
                 method = service.set_checkin if self.kind == "checkin" else service.set_observation
                 result = method(**self.arguments)
+            else:
+                raise ValueError("Unknown vault operation")
         except Exception as caught:
             error = caught
             # Reconcile after optimistic conflicts. Never turn a failed save into success.

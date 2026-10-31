@@ -268,10 +268,11 @@ class ReferenceLookup:
         if len(targets) != 1:
             return "Referenced document is missing, invalid, or ambiguous"
         expected = {
+            "task_id": ("task",),
             "habit_id": ("habit",),
             "field_id": ("metric_definition",),
             "note_id": ("note", "page", "year_page", "month_page", "week_page", "day_page"),
-            "source_id": ("habit", "metric_definition"),
+            "source_id": ("habit", "metric_definition", "task"),
         }.get(reference.role)
         if expected and targets[0].kind not in expected:
             return f"Referenced document has wrong kind; expected {expected}"

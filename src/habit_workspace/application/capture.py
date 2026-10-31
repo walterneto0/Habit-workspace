@@ -326,6 +326,7 @@ class CaptureSnapshot:
     """Read-only per-day projection of layout blocks; no I/O and no writes."""
 
     def __init__(self, report: ScanReport, day: date, today: date):
+        self.report = report
         self.day, self.today = day, today
         self.error = ""
         try:
@@ -413,6 +414,8 @@ class CaptureSnapshot:
             return [self.field_cell(binding.source_id)] if binding else []
         if not isinstance(component.config, ChecklistConfig):
             return []
+        if binding is not None and binding.kind == "task":
+            return []
         if binding is not None:
             return [
                 self.habit_cell(binding.source_id)
@@ -426,7 +429,18 @@ class CaptureSnapshot:
         # Never sort it by name or drop an ineligible/missing canonical source.
         if selection.mode == "manual":
             ordered: list[HabitCell | FieldCell] = []
+            task_ids = {d.document.id for d in self.report.documents if d.document.kind == "task"}
             for identifier in selection.source_ids:
+                if (
+                    identifier in task_ids
+                    or selection.value_types == ("task",)
+                    or (
+                        "task" in selection.value_types
+                        and identifier not in self.habits
+                        and identifier not in self.fields
+                    )
+                ):
+                    continue
                 if identifier in self.fields:
                     cell = self.field_cell(identifier)
                     compatible = cell.value_type == "boolean" and "boolean" in selection.value_types

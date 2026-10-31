@@ -60,6 +60,11 @@ Rectangle {
                             icon: "chart"
                         },
                         {
+                            view: "planning",
+                            label: qsTr("Planejamento"),
+                            icon: "check"
+                        },
+                        {
                             view: "habits",
                             label: qsTr("Hábitos"),
                             icon: "day"

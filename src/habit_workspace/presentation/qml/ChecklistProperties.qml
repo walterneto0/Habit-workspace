@@ -13,10 +13,10 @@ ColumnLayout {
     readonly property string mode: selection.mode || "manual"
     property bool choosingTags: false
     property bool includeBooleanFields: false
-    readonly property var habits: sources.filter(s => s.kind === "habit" || (includeBooleanFields && s.kind === "metric_definition" && s.type === "boolean"))
+    readonly property var habits: sources.filter(s => s.kind === "habit" || s.kind === "task" || (includeBooleanFields && s.kind === "metric_definition" && s.type === "boolean"))
     spacing: 8
     function labelFor(id) { const source = sources.find(s => s.id === id); return source ? source.name : qsTr("Referência ausente: ") + id; }
-    UiText { Layout.fillWidth: true; text: qsTr("Hábitos da checklist"); font.weight: Font.Medium }
+    UiText { Layout.fillWidth: true; text: qsTr("Hábitos e tarefas da checklist"); font.weight: Font.Medium }
     StudioChoice {
         objectName: "checklist-mode"
         Layout.fillWidth: true
@@ -40,7 +40,7 @@ ColumnLayout {
             id: search
             objectName: "checklist-search"
             Layout.fillWidth: true
-            placeholderText: qsTr("Buscar hábitos pelo nome")
+            placeholderText: qsTr("Buscar hábitos ou tarefas pelo nome")
             Accessible.name: placeholderText
         }
         StudioChoice {

@@ -16,6 +16,8 @@ class DocumentError(ValueError):
 
 
 class DocumentKind(StrEnum):
+    TASK = "task"
+    GOAL = "goal"
     NOTE = "note"
     PAGE = "page"
     DAY = "day_page"
@@ -183,6 +185,10 @@ class Document:
                 require(len(days) == len(set(days)), "Weekdays must be unique")
             if hw.get("archived_at") is not None:
                 timestamp(hw["archived_at"], "archived_at")
+        if self.kind in (DocumentKind.TASK, DocumentKind.GOAL):
+            from habit_workspace.domain.planning import planning_from_mapping
+
+            planning_from_mapping(hw)
         if self.kind == DocumentKind.METRIC:
             from habit_workspace.domain.metrics import field_from_mapping
 

@@ -366,3 +366,54 @@ Boolean metric bindings/selections remain supported and write observations.
 Checklist selection and single binding remain mutually exclusive. Multiple blocks
 can reference the same habit; their records remain keyed by habit UUID and date in
 one canonical daily page, never copied into a layout or habit definition.
+
+## Phase 7A — tasks and goals
+
+New schema-v4 kinds `task` and `goal` require `id` (UUID), non-empty `title`,
+`scope.start` and nullable `scope.end_exclusive`, and `status`. Markdown body is
+canonical description. Optional tags and origin_page_id follow existing rules.
+Tasks use pending/completed, optional ISO civil `due_date` independent of scope,
+and optional aware `completed_at` (only when completed). Reopening clears that
+ timestamp; imported completed tasks need not invent a completion time.
+Goals use not_started/in_progress/achieved/paused/abandoned and optional integer
+`progress_percent` 0–100. Status and progress never update each other automatically.
+New records live in Items/Tasks/<uuid>.md or Items/Goals/<uuid>.md by convention.
+No migration of existing documents, daily records, deletion, or inferred progress.
+Updates retain unknown metadata (including nested scope keys) and Markdown.
+
+Period planning includes intersecting scopes or task deadlines in the period,
+deduplicated by UUID. Scopes contained within the period are labeled "Do período";
+longer/overlapping scopes are contextual. Pending tasks whose scope ended before
+the period are separately labeled prior-period work; overdue uses today's date,
+not the viewed historical period. Carryover is shown only for a period containing
+today, or an explicit all-items planning view. Scope never changes implicitly.
+Historical views show current canonical status, not a fabricated status history.
+
+Checklist/list bindings may use `kind: task`; manual selections may include
+`value_types: [task]` alongside existing habit/boolean types. Task completion edits
+only the task document, never checkins/observations. Charts cannot select tasks.
+Existing dynamic habit selections keep their original meaning. Removing a block
+never removes a task. Missing/duplicate references remain visible and noneditable.
+
+Example canonical task (description is the Markdown body):
+
+```yaml
+---
+hw:
+  schema_version: 4
+  kind: task
+  id: "973825fa-649b-4f6d-a692-01a5a6e05664"
+  title: "Prepare an outline"
+  tags: [work]
+  scope:
+    start: "2026-10-26"
+    end_exclusive: "2026-11-02"
+  due_date: "2026-11-04"
+  status: pending
+---
+Include the decisions that need discussion.
+```
+
+A goal substitutes `kind: goal`, uses one of the goal statuses, and may include
+`progress_percent: 37`. It has no deadline/completion contract. Unknown compatible
+extensions remain inert. There is no schema-version rewrite when opening a vault.

@@ -12,11 +12,11 @@ from habit_workspace.domain.temporal import PeriodRef
 @dataclass(frozen=True)
 class Binding:
     source_id: UUID
-    kind: Literal["metric", "habit", "note"]
+    kind: Literal["metric", "habit", "note", "task"]
 
     def __post_init__(self) -> None:
         identity(self.source_id)
-        check(self.kind in ("metric", "habit", "note"), "Unsupported binding kind")
+        check(self.kind in ("metric", "habit", "note", "task"), "Unsupported binding kind")
 
 
 @dataclass(frozen=True)
@@ -47,7 +47,7 @@ class ChecklistConfig:
         if self.selection is not None:
             check(
                 bool(self.selection.value_types)
-                and set(self.selection.value_types) <= {"boolean", "habit"},
+                and set(self.selection.value_types) <= {"boolean", "habit", "task"},
                 "Checklist sources must be boolean metrics or habits",
             )
 
@@ -104,6 +104,7 @@ class ChartConfig:
         check(
             isinstance(self.selection, SourceSelection), "Chart needs structured source selection"
         )
+        check("task" not in self.selection.value_types, "Tasks cannot feed charts")
         check(
             self.selection.mode in ("manual", "by_tags"),
             "Charts require fixed IDs or dynamic tags",
@@ -225,8 +226,8 @@ class ComponentRegistry:
 
 REGISTRY = ComponentRegistry(
     (
-        ComponentDefinition("checklist", ChecklistConfig, ("habit", "metric")),
-        ComponentDefinition("list", ListConfig, ("metric", "habit")),
+        ComponentDefinition("checklist", ChecklistConfig, ("habit", "metric", "task")),
+        ComponentDefinition("list", ListConfig, ("metric", "habit", "task")),
         ComponentDefinition("table", TableConfig),
         ComponentDefinition("chart", ChartConfig),
         ComponentDefinition("note", NoteConfig, ("note",)),

@@ -14,6 +14,9 @@ GridLayout {
     property bool tracking: false
     property var feedback: ({})
     signal selectedBlock(int index)
+    property bool planningBusy: false
+    signal planningEdit(string identifier)
+    signal planningComplete(string identifier, bool completed, string token)
     signal details(string identifier)
     signal checkin(string habitId, string state, string token)
     signal observe(string fieldId, string blockId, string text, string token)
@@ -137,9 +140,20 @@ GridLayout {
                         onClearValue: (fieldId, token) => root.clearValue(fieldId, token)
                     }
                 }
+                Repeater {
+                    model: card.modelData.planning || []
+                    delegate: PlanningRow {
+                        required property var modelData
+                        Layout.fillWidth: true
+                        row: modelData
+                        busy: !root.tracking || root.planningBusy
+                        onEdit: root.planningEdit(row.id)
+                        onComplete: root.planningComplete(row.id, row.status !== "completed", row.token)
+                    }
+                }
                 UiText {
                     Layout.fillWidth: true
-                    visible: root.tracking && card.captures && card.cells.length === 0
+                    visible: !(card.modelData.planning || []).length && root.tracking && card.captures && card.cells.length === 0
                     text: card.modelData.type === "checklist" ? qsTr("Nenhum hábito elegível nesta data ou seleção vazia. Configure os hábitos no Layout Studio.") : qsTr("Campo sem definição vinculada.")
                     color: Theme.secondary
                 }
@@ -230,6 +244,9 @@ GridLayout {
                         item.preview = Qt.binding(() => root.preview);
                         item.tracking = Qt.binding(() => root.tracking);
                         item.feedback = Qt.binding(() => root.feedback);
+                        item.planningBusy = Qt.binding(() => root.planningBusy);
+                        item.planningEdit.connect(root.planningEdit);
+                        item.planningComplete.connect(root.planningComplete);
                         item.checkin.connect(root.checkin);
                         item.observe.connect(root.observe);
                         item.observeBoolean.connect(root.observeBoolean);

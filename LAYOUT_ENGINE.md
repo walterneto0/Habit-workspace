@@ -150,3 +150,14 @@ revisão (`effective_at`).
 - Adiado (6.5B ou posterior): visualização somente leitura de uma revisão
   histórica, claramente rotulada. O resolver já suporta `resolve(period, instante)`,
   mas a interface não foi criada nesta fase.
+
+## Phase 7A task bindings
+
+Existing list/checklist components can bind a canonical task UUID. The manual
+checklist picker includes tasks alongside habits and optional boolean fields.
+Task selection uses `value_types: [task]` (or mixed supported types), retaining
+UUIDs and order. Habit dynamic modes retain their prior date/recurrence semantics.
+A list can bind one existing task. Multiple list blocks can present the same task.
+Task completion and reopening update the task Markdown, independent of the capture
+day; no daily check-in/observation is created. Missing/ambiguous references are
+noneditable. Layout versions and block removal never change canonical task values.
