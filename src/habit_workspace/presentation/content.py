@@ -122,6 +122,17 @@ class ContentActions(QObject):
         if not self.form or self.form.get("readonly") or w.actions.busy:
             return
         self.form = self.form | dict(values)
+        if (
+            not self.form.get("region")
+            and not self.form.get("followup")
+            and (
+                self.form.get("periodValid") is False
+                or (self.form.get("kind") == "review" and not self.form.get("period"))
+            )
+        ):
+            self.form["error"] = "Escolha um período exato válido; rascunho preservado."
+            w._publish()
+            return
         if w.actions.tasks.capture(
             "content_save", dict(loaded=self.loaded, values=dict(self.form))
         ):
@@ -197,14 +208,11 @@ class ContentActions(QObject):
                 if error:
                     self.form["error"] = "Imagem não importada; rascunho preservado. " + str(error)
                 else:
-                    from habit_workspace.presentation.layout_assets import (
-                        image_markdown,
-                        markdown_images,
-                    )
+                    from habit_workspace.presentation.layout_assets import image_markdown
 
                     self.form["body"] += "\n" + image_markdown(result, target[1]) + "\n"
                     self.form["imageRevision"] += 1
-                    self.form["images"] = markdown_images(w.session.root, self.form["body"])
+                    w.actions.tasks.capture("content_media", dict(body=self.form["body"]))
         w._publish()
 
     def completed(self, error):

@@ -12,7 +12,7 @@ Dialog {
     readonly property var form: modelState.contentForm || ({})
     readonly property int imageRevision: form.imageRevision || 0
     onImageRevisionChanged: { if (wanted && imageRevision) body.text = form.body || ""; }
-    function values() { return {title:titleInput.text, body:body.text, period:period.text, rating:rating.text}; }
+    function values() { return {title:titleInput.text, body:body.text, period:period.period, periodValid:period.valid, rating:rating.text}; }
     FileDialog {
         id: imagePicker
         objectName: "note-image-picker"
@@ -35,7 +35,7 @@ Dialog {
     onAboutToShow: {
         titleInput.text = form.title || "";
         body.text = form.body || "";
-        period.text = form.period || "";
+        period.setPeriod(form.period || "", modelState.today);
         preview.checked = false;
         rating.text = form.rating || "";
         alt.text = "";
@@ -43,7 +43,7 @@ Dialog {
     onOpened: body.forceActiveFocus()
     header: UiText {
         padding: 20
-        text: dialog.form.followup ? qsTr("Acompanhamento do objetivo · ") + dialog.form.followup :
+        text: dialog.form.followup && dialog.backend ? qsTr("Acompanhamento do objetivo · ") + dialog.backend.periodChoices.label(dialog.form.followup) :
               dialog.form.region ? qsTr("Texto da página · região Markdown") : dialog.form.kind === "review" ? qsTr("Avaliação do período · Markdown") : qsTr("Nota independente · Markdown")
         font.pixelSize: 18
     }
@@ -57,43 +57,48 @@ Dialog {
             onClicked: dialog.backend.contentActions.save(dialog.values())
         }
     }
-    contentItem: ColumnLayout {
-        implicitWidth: 400
-        enabled: !dialog.busy
-        Input { id: titleInput; objectName: "content-title"; Layout.fillWidth: true; visible: !dialog.form.region && !dialog.form.followup; placeholderText: qsTr("Título"); Accessible.name: placeholderText }
-        Input { id: period; objectName: "content-period"; Layout.fillWidth: true; visible: !dialog.form.region && !dialog.form.followup; placeholderText: (dialog.form.kind === "review" ? qsTr("Período obrigatório: ") : qsTr("Período opcional: ")) + "year/2026, month/2026-10, week/2026-W44, day/2026-10-29"; Accessible.name: placeholderText }
-        Input { id: rating; objectName: "review-rating"; Layout.fillWidth: true; visible: dialog.form.kind === "review"; placeholderText: qsTr("Avaliação manual opcional · inteiro de 1 a 5"); Accessible.name: placeholderText }
-        RowLayout {
-            Layout.fillWidth: true
-            visible: !dialog.form.followup
-            Input { id: alt; objectName: "image-alt"; Layout.fillWidth: true; placeholderText: qsTr("Descrição alternativa da imagem"); Accessible.name: placeholderText }
-            ActionButton { objectName: "content-image-select"; text: qsTr("Inserir imagem local"); enabled: !dialog.form.readonly; onClicked: imagePicker.open() }
-        }
-        CheckBox { id: preview; objectName: "content-preview"; onToggled: { if (checked) dialog.backend.contentActions.previewImages(body.text); } text: qsTr("Prévia segura · Markdown sem recursos ativos") }
-        ScrollView {
-            Layout.fillWidth: true
-            Layout.fillHeight: true
-            TextArea {
-                id: body
-                objectName: "content-body"
-                Keys.onTabPressed: (event) => { saveButton.forceActiveFocus(); event.accepted = true; }
-                Keys.onBacktabPressed: (event) => { preview.forceActiveFocus(); event.accepted = true; }
-                textFormat: TextEdit.PlainText
-                readOnly: preview.checked || !!dialog.form.readonly
-                wrapMode: TextEdit.Wrap
-                selectByMouse: true
-                color: Theme.text
-                Accessible.name: qsTr("Conteúdo Markdown completo")
-                background: Rectangle { color: Theme.canvas; border.color: body.activeFocus ? Theme.accent : Theme.border }
+    contentItem: ScrollView {
+        id: formScroll
+        contentWidth: availableWidth
+        clip: true
+        ColumnLayout {
+            width: formScroll.availableWidth
+            enabled: !dialog.busy
+            Input { id: titleInput; objectName: "content-title"; Layout.fillWidth: true; visible: !dialog.form.region && !dialog.form.followup; placeholderText: qsTr("Título"); Accessible.name: placeholderText }
+            PeriodSelector { id: period; objectName: "content-period"; backend: dialog.backend; Layout.fillWidth: true; visible: !dialog.form.region && !dialog.form.followup; optional: dialog.form.kind !== "review"; label: dialog.form.kind === "review" ? qsTr("Período exato da avaliação") : qsTr("Período associado · opcional") }
+            Input { id: rating; objectName: "review-rating"; Layout.fillWidth: true; visible: dialog.form.kind === "review"; placeholderText: qsTr("Avaliação manual opcional · inteiro de 1 a 5"); Accessible.name: placeholderText }
+            RowLayout {
+                Layout.fillWidth: true
+                visible: !dialog.form.followup
+                Input { id: alt; objectName: "image-alt"; Layout.fillWidth: true; placeholderText: qsTr("Descrição alternativa da imagem"); Accessible.name: placeholderText }
+                ActionButton { objectName: "content-image-select"; text: qsTr("Inserir imagem local"); enabled: !dialog.form.readonly; onClicked: imagePicker.open() }
             }
+            StudioCheckBox { id: preview; objectName: "content-preview"; Layout.fillWidth: true; onToggled: { if (checked) dialog.backend.contentActions.previewImages(body.text); } text: qsTr("Prévia segura · Markdown sem recursos ativos") }
+            ScrollView {
+                Layout.fillWidth: true
+                Layout.preferredHeight: Math.max(200, dialog.height - (period.visible ? 500 : 240))
+                TextArea {
+                    id: body
+                    objectName: "content-body"
+                    Keys.onTabPressed: (event) => { saveButton.forceActiveFocus(); event.accepted = true; }
+                    Keys.onBacktabPressed: (event) => { preview.forceActiveFocus(); event.accepted = true; }
+                    textFormat: TextEdit.PlainText
+                    readOnly: preview.checked || !!dialog.form.readonly
+                    wrapMode: TextEdit.Wrap
+                    selectByMouse: true
+                    color: Theme.text
+                    Accessible.name: qsTr("Conteúdo Markdown completo")
+                    background: Rectangle { color: Theme.canvas; border.color: body.activeFocus ? Theme.accent : Theme.border }
+                }
+            }
+            ScrollView {
+                visible: preview.checked
+                Layout.fillWidth: true
+                Layout.preferredHeight: preview.checked ? 180 : 0
+                contentWidth: availableWidth
+                LocalImages { width: parent.width; images: dialog.form.images || [] }
+            }
+            UiText { Layout.fillWidth: true; text: dialog.form.error || ""; visible: text.length > 0; color: Theme.error; Accessible.role: Accessible.AlertMessage }
         }
-        ScrollView {
-            visible: preview.checked
-            Layout.fillWidth: true
-            Layout.preferredHeight: preview.checked ? 180 : 0
-            contentWidth: availableWidth
-            LocalImages { width: parent.width; images: dialog.form.images || [] }
-        }
-        UiText { Layout.fillWidth: true; text: dialog.form.error || ""; visible: text.length > 0; color: Theme.error; Accessible.role: Accessible.AlertMessage }
     }
 }

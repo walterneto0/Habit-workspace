@@ -35,6 +35,14 @@ class _Job(QRunnable):
             if self.kind == "refresh":
                 if not opened:
                     session.scan()
+            elif self.kind == "layout_media":
+                from habit_workspace.presentation.layout_assets import load_images
+
+                result = (
+                    self.arguments["context"],
+                    self.arguments["generation"],
+                    load_images(session.root, self.arguments["paths"]),
+                )
             elif self.kind in ("image_import", "content_media"):
                 from habit_workspace.presentation.layout_assets import import_image, markdown_images
 
@@ -123,6 +131,7 @@ class VaultTasks(QObject):
         self._closed = False
         self._refresh_pending = False
         self._capture_pending = None
+        self._media_pending = {}
         self.active = False
         self.saving = False
         self.job = None
@@ -146,6 +155,11 @@ class VaultTasks(QObject):
         self._pump()
         return True
 
+    def media(self, arguments):
+        if not self._closed:
+            self._media_pending[arguments["context"]] = dict(arguments)
+            self._pump()
+
     def _pump(self):
         if self._closed or self.active:
             return
@@ -155,6 +169,9 @@ class VaultTasks(QObject):
         elif self._refresh_pending:
             kind, arguments = "refresh", {}
             self._refresh_pending = False
+        elif self._media_pending:
+            context = next(iter(self._media_pending))
+            kind, arguments = "layout_media", self._media_pending.pop(context)
         else:
             return
         self.active = True
@@ -166,7 +183,7 @@ class VaultTasks(QObject):
     def _done(self, payload):
         epoch, kind, result, report, index_error, error = payload
         self.active = False
-        if kind != "refresh":
+        if kind not in ("refresh", "layout_media"):
             self.saving = False
         if not self._closed and epoch == self._epoch:
             self.completed.emit(kind, result, report, index_error, error)
@@ -178,6 +195,7 @@ class VaultTasks(QObject):
         pending = self._capture_pending
         self._capture_pending = None
         self._refresh_pending = False
+        self._media_pending.clear()
         if pending:
             # A capture already accepted by the UI must finish even when closing.
             kind, arguments = pending

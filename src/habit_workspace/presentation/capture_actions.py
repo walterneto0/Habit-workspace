@@ -42,6 +42,8 @@ class CaptureActions(QObject):
 
     def invalidate(self):
         if self.tasks:
+            self.workspace.media.reset()
+            self.workspace.studio.media.reset()
             self.tasks.invalidate()
 
     def close(self):
@@ -171,6 +173,11 @@ class CaptureActions(QObject):
     @Slot(str, object, object, object, object)
     def _completed(self, kind, result, report, index_error, error):
         w = self.workspace
+        if kind == "layout_media":
+            if result is not None:
+                media = w.studio.media if result[0] == "studio" else w.media
+                media.completed(result)
+            return
         if report is not None:
             w.session.report = report
             w.session.index_error = index_error
@@ -223,5 +230,5 @@ class CaptureActions(QObject):
                 True,
             )
         emitted = report is not None and w.watcher.accept_report(report)
-        if not emitted and (kind != "refresh" or error or index_error):
+        if not emitted:
             w._publish()

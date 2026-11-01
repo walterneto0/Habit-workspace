@@ -11,6 +11,7 @@ Dialog {
     readonly property var form: modelState.planningForm || ({})
     readonly property bool wanted: !!form.open
     readonly property bool busy: !!modelState.planningSaving
+    property string trackingPolicy: "home_only"
     modal: true
     anchors.centerIn: parent
     width: Math.min(parent.width - 32, 600)
@@ -23,14 +24,14 @@ Dialog {
     onAboutToShow: {
         titleInput.text = form.title || ""; body.text = form.body || "";
         tags.text = form.tags || ""; start.text = form.start || ""; end.text = form.end || "";
-        home.text = form.home || "";
-        cadence.currentIndex = Math.max(0, cadence.values.indexOf(form.cadence || "home_only"));
+        home.setPeriod(form.home || "", modelState.today);
+        trackingPolicy = form.cadence || "home_only";
         due.text = form.due || ""; progress.text = form.progress || "";
         status.currentIndex = Math.max(0, ["not_started","in_progress","achieved","paused","abandoned"].indexOf(form.status));
     }
     onOpened: titleInput.forceActiveFocus()
     function save() {
-        backend.planningActions.save({home:home.text, cadence:cadence.values[cadence.currentIndex], title:titleInput.text, body:body.text, tags:tags.text, start:start.text, end:end.text, due:due.text, progress:progress.text, status:["not_started","in_progress","achieved","paused","abandoned"][status.currentIndex]});
+        backend.planningActions.save({home:home.period, cadence:trackingPolicy, title:titleInput.text, body:body.text, tags:tags.text, start:start.text, end:end.text, due:due.text, progress:progress.text, status:["not_started","in_progress","achieved","paused","abandoned"][status.currentIndex]});
     }
     header: UiText { padding: 20; text: dialog.form.kind === "goal" ? qsTr("Objetivo · detalhes e edição") : qsTr("Tarefa · detalhes e edição"); font.pixelSize: 20 }
     footer: RowLayout {
@@ -57,7 +58,8 @@ Dialog {
             Input { id: end; objectName: "planning-end"; Layout.fillWidth: true; Accessible.name: qsTr("Fim inclusivo do escopo") }
             UiText { visible: dialog.form.kind === "task"; text: qsTr("Prazo opcional · independente do escopo") }
             Input { id: due; objectName: "planning-due"; visible: dialog.form.kind === "task"; Layout.fillWidth: true; placeholderText: "AAAA-MM-DD"; Accessible.name: qsTr("Prazo opcional") }
-            Input { id: home; objectName: "goal-home"; visible: dialog.form.kind === "goal"; Layout.fillWidth: true; placeholderText: qsTr("Pertence ao período · year/2026"); Accessible.name: placeholderText }
+            PeriodSelector { id: home; objectName: "goal-home"; backend: dialog.backend; visible: dialog.form.kind === "goal"; Layout.fillWidth: true; label: qsTr("Pertence ao período · independente do escopo") }
+            UiText { visible: dialog.form.kind === "goal"; text: qsTr("Acompanhar") }
             StudioChoice {
                 id: cadence
                 objectName: "goal-cadence"
@@ -65,12 +67,21 @@ Dialog {
                 Layout.fillWidth: true
                 label: qsTr("Acompanhar")
                 property var values: {
-                    let scale = home.text.split("/")[0];
+                    let scale = home.scale;
                     return scale === "year" ? ["home_only","month","week","day"] :
                            scale === "month" ? ["home_only","week","day"] :
                            scale === "week" ? ["home_only","day"] : ["home_only"];
                 }
                 model: values.map(v => ({home_only:qsTr("Somente neste período"),month:qsTr("Mensal"),week:qsTr("Semanal"),day:qsTr("Diário")}[v]))
+                currentIndex: values.indexOf(dialog.trackingPolicy)
+                displayText: currentIndex < 0 ? qsTr("Escolha um acompanhamento compatível") : currentText
+                onActivated: dialog.trackingPolicy = values[currentIndex]
+            }
+            UiText {
+                Layout.fillWidth: true
+                visible: dialog.form.kind === "goal" && cadence.currentIndex < 0
+                text: qsTr("Acompanhamento preservado: ") + ({month:qsTr("Mensal"),week:qsTr("Semanal"),day:qsTr("Diário")}[dialog.trackingPolicy] || "") + qsTr(". Escolha uma opção compatível ou restaure o período antes de salvar.")
+                color: Theme.warning
             }
             StudioChoice { id: status; objectName: "planning-status"; visible: dialog.form.kind === "goal"; Layout.fillWidth: true; label: qsTr("Status"); model: [qsTr("Não iniciado"),qsTr("Em andamento"),qsTr("Alcançado"),qsTr("Pausado"),qsTr("Abandonado")] }
             Input { id: progress; objectName: "planning-progress"; visible: dialog.form.kind === "goal"; Layout.fillWidth: true; placeholderText: qsTr("Progresso manual 0–100, vazio = não informado"); Accessible.name: placeholderText }

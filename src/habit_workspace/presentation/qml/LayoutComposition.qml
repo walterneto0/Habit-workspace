@@ -227,6 +227,9 @@ GridLayout {
                     }
                 }
                 Image {
+                    objectName: "layout-image-" + (card.modelData.id || "")
+                    readonly property bool decoded: status === Image.Ready
+                    asynchronous: true
                     Layout.fillWidth: true
                     Layout.preferredHeight: 160
                     visible: !!card.modelData.imageSource
@@ -256,6 +259,7 @@ GridLayout {
                         item.planningBusy = Qt.binding(() => root.planningBusy);
                         item.planningEdit.connect(root.planningEdit);
                         item.planningComplete.connect(root.planningComplete);
+                        item.editContent.connect(root.editContent);
                         item.checkin.connect(root.checkin);
                         item.observe.connect(root.observe);
                         item.observeBoolean.connect(root.observeBoolean);

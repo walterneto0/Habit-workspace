@@ -211,3 +211,25 @@ and draft identity; notes retain the whole form before dispatch. A bounded pixel
 cache uses path, inode, size, mtime and ctime; containment is checked even on hits.
 Only validated data PNG URLs reach QML. Raw Markdown/HTML/remote image URLs never
 become QML resource URLs. Failed/cancelled reference saves can leave orphan assets.
+
+### Phase 7B.1 presentation corrections
+
+`PeriodChoices` adapts the existing `PeriodRef` calendar to Portuguese selector
+options; QML keeps the selected tracking value independently of option positions.
+No schema, migration, item identity or persistence path changes.
+
+`LayoutMedia` checks contained asset revisions on the GUI thread and coalesces
+cache misses on `VaultTasks` as read-only media requests. Page and Studio contexts
+each have one pending request; accepted writes and refreshes take priority over
+pending media. Generations reject superseded display requests, and revision keys
+are checked again before publication. Media completion cannot publish its old
+document scan. Workers transfer inert strings, never QPixmap/GUI objects.
+
+Original 2 MiB/4,000,000-pixel limits are checked before decoding; display previews
+are at most 1024 px on their longest edge. Original image files are unchanged.
+The existing encoded-pixel LRU remains bounded at 64 MiB; media batches and each
+display context also have a 64 MiB payload budget with visible overflow errors.
+Markdown media batches retain the 64-link limit. QML Images load asynchronously.
+Unchanged document refreshes revalidate displayed assets, so an image-only external
+edit does not depend on a Markdown fingerprint change. Full measurements and
+remaining rendering/queue limitations are in the 7B.1 verification report.

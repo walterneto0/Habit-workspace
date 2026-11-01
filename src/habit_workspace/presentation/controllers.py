@@ -112,6 +112,12 @@ class WorkspaceController(QObject):
         from habit_workspace.presentation.content import ContentActions
 
         self.content = ContentActions(self)
+        from habit_workspace.presentation.period_selection import PeriodChoices
+
+        self.period_choices = PeriodChoices(self)
+        from habit_workspace.presentation.layout_media import LayoutMedia
+
+        self.media = LayoutMedia(self)
         self.date_timer = QTimer(self)
         self.date_timer.setInterval(self.DATE_CHECK_MS)
         self.date_timer.timeout.connect(self.refreshDate)
@@ -138,6 +144,10 @@ class WorkspaceController(QObject):
     def contentActions(self):
         return self.content
 
+    @Property(QObject, constant=True)
+    def periodChoices(self):
+        return self.period_choices
+
     def _composition(self):
         if not self.session or not self.navigation.period:
             return {}
@@ -157,6 +167,7 @@ class WorkspaceController(QObject):
                     self.session.root,
                     capture=capture,
                     period=self.navigation.period_ref,
+                    images=self.media.source,
                 ),
                 columns=resolved.layout.grid.columns,
                 issues=list(resolved.issues),
@@ -714,7 +725,7 @@ class WorkspaceController(QObject):
         if doc.kind in ("note", "review"):
             from habit_workspace.presentation.layout_assets import markdown_images
 
-            row["images"] = markdown_images(self.session.root, doc.body)
+            row["images"] = markdown_images(self.session.root, doc.body, self.media.source)
         row["records"] = []
         if doc.kind == "review":
             rating = doc.metadata["hw"].get("assessment", {}).get("rating")
@@ -737,6 +748,7 @@ class WorkspaceController(QObject):
         return row
 
     def _publish(self):
+        self.media.begin()
         nav = self.navigation
         entries = self._entries()
         visible = entries
@@ -809,12 +821,16 @@ class WorkspaceController(QObject):
         if state != self._state:
             self._state = state
             self.changed.emit()
+        if self.session:
+            self.media.finish()
 
     def _attach(self, session: VaultSession):
         if self.watcher:
             self.watcher.stop()
             self.watcher.deleteLater()
         self.session = session
+        self.media.reset()
+        self.studio.media.reset()
         self.planning.form, self.planning.loaded = {}, None
         self._selected, self._query = "", ""
         self._return_context = None

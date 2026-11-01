@@ -123,6 +123,16 @@ class PlanningActions(QObject):
                     status=f["status"],
                     progress_percent=int(f["progress"]) if f["progress"].strip() else None,
                 )
+                home = PeriodRef(fields["home_period_ref"])
+                scales = ("year", "month", "week", "day")
+                if (
+                    f["cadence"] != "home_only"
+                    and f["cadence"] not in scales[scales.index(home.scale) + 1 :]
+                ):
+                    raise ValueError(
+                        "O acompanhamento escolhido não é compatível com este período. "
+                        "Escolha uma opção menor ou restaure o período; rascunho preservado."
+                    )
             arguments = dict(
                 loaded=self.loaded,
                 fields=fields,
