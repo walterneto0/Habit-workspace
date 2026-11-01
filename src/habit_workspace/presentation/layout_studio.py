@@ -111,7 +111,7 @@ def composition(layout, report, root=None, draft_fields=None, capture=None, peri
                 doc.title if doc else "Referência ausente: " + str(block.binding.source_id)
             )
             if block.type == "note" and doc:
-                row["detail"] = doc.body[:6000]
+                row["detail"] = doc.body
             field = draft_fields.get(block.binding.source_id)
             if field:
                 row["bindingLabel"] = field.name + " · novo campo (rascunho)"
@@ -123,6 +123,26 @@ def composition(layout, report, root=None, draft_fields=None, capture=None, peri
                     row["minimum"] = field.minimum
                 if field.maximum is not None:
                     row["maximum"] = field.maximum
+        if block.type == "note":
+            row["noteLinked"] = str(block.binding.source_id) if block.binding else ""
+            row["noteRegion"] = str(block.config.content_id or block.id)
+            if not block.binding and period:
+                from habit_workspace.application.content import regions
+                from habit_workspace.application.layouts import period_page
+
+                page = period_page(report, period)
+                try:
+                    row["detail"] = (
+                        regions(page.document.body)[row["noteRegion"]][2]
+                        if page
+                        else "Região ausente."
+                    )
+                except ValueError, KeyError:
+                    row["detail"] = "Região ausente ou marcadores inválidos; arquivo preservado."
+        if block.type == "note" and root:
+            from habit_workspace.presentation.layout_assets import markdown_images
+
+            row["noteImages"] = markdown_images(root, row["detail"])
         selection = getattr(block.config, "selection", None)
         if selection:
             row["detail"] = (
@@ -551,6 +571,10 @@ class LayoutStudio(QObject):
         except ValueError as error:
             self.message = "Operação inválida: " + str(error)
         self.changed.emit()
+
+    @Slot(str)
+    def importImage(self, source):
+        self.workspace.content.import_for_layout(source)
 
     @Slot(str, str)
     def edit(self, key, value):

@@ -1,7 +1,7 @@
 # Repository instructions for Codex — Habit Workspace v4
 
 ## Mandatory reading
-Before any feature: read `PRODUCT.md`, `FILE_FORMAT.md`, `LAYOUT_ENGINE.md`, `ARCHITECTURE.md`, `PRIVACY.md`, `DESIGN_SYSTEM.md`, `ROADMAP.md`. v4 supersedes previous instructions saying SQLite is the primary database.
+Before any feature: read `PRODUCT.md`, `FILE_FORMAT.md`, `LAYOUT_ENGINE.md`, `ARCHITECTURE.md`, `PRIVACY.md`, `DESIGN_SYSTEM.md`, `ROADMAP.md`. For Phase 7B, also read `docs/planning/phase-7b-direction.md`. v4 supersedes previous instructions saying SQLite is the primary database.
 
 ## Highest-priority product invariants
 - Python + PySide6 / Qt Quick (QML), desktop first, clean Linear-inspired aesthetic; Qt is presentation only, domain is pure typed Python.

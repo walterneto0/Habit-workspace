@@ -161,3 +161,37 @@ A list can bind one existing task. Multiple list blocks can present the same tas
 Task completion and reopening update the task Markdown, independent of the capture
 day; no daily check-in/observation is created. Missing/ambiguous references are
 noneditable. Layout versions and block removal never change canonical task values.
+
+## Phase 7B direction — goals, note regions and assets
+
+A goal's home period is not equivalent to its time interval. Default pages
+must not inherit parent goals through date intersection. A smaller-period
+follow-up exists only by explicit tracking choice, and references the same
+canonical goal UUID. Search or deliberate binding is different from automatic
+child-period projection. Habit schedule and task completion retain their
+existing independent semantics.
+
+A note block can bind a standalone note or edit a page-local Markdown region,
+never both implicitly. Page-local regions use stable `hw:content` markers;
+Layout JSON stores only configuration/identifiers, not canonical text.
+Moving/removing a block or publishing a revision never erases that text.
+
+Images point to validated local, vault-relative Assets paths. The importer
+must not accept remote URLs or unsafe path traversal. Missing assets remain
+visible as broken references rather than silently deleting content.
+Refer to `docs/planning/phase-7b-direction.md` before implementing.
+
+### Phase 7B execution 1
+Normal note blocks expose distinct edit actions for binding.source_id standalone
+notes and page-local regions (config.content_id, otherwise component UUID).
+Rendering resolves page content independently of layout version and reports
+invalid/missing markers. Editors always load full canonical text, never the
+rendered excerpt. Layout movement/removal never invokes content deletion.
+
+### Phase 7B final image workflow
+Image properties provide local selection/import and alternative text. Import
+updates the selected block's ImageConfig.path in the draft; publishing still
+creates an immutable layout revision through the existing save workflow.
+Note blocks display only validated local Assets references. Missing/corrupt assets
+produce visible messages without changing content. Removing blocks does not
+delete images, notes or review documents.

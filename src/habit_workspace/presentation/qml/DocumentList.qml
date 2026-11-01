@@ -164,6 +164,7 @@ ColumnLayout {
                 lineHeight: 1.4
                 wrapMode: Text.WrapAnywhere
             }
+            LocalImages { Layout.fillWidth: true; images: listing.modelState.selected.images || [] }
             UiText {
                 visible: !!listing.modelState.selected.truncated
                 Layout.fillWidth: true

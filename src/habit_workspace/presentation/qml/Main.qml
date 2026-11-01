@@ -136,7 +136,7 @@ ApplicationWindow {
         onActivated: window.backend.clearSelection()
     }
 
-    onClosing: function(close) { if (modelState.planningForm && modelState.planningForm.open) { close.accepted = false; return; } if (backend.layoutStudio.state.active) { close.accepted = false; studioView.discard(); } }
+    onClosing: function(close) { if (modelState.contentForm && modelState.contentForm.open) { close.accepted = false; return; } if (modelState.planningForm && modelState.planningForm.open) { close.accepted = false; return; } if (backend.layoutStudio.state.active) { close.accepted = false; studioView.discard(); } }
 
     RowLayout {
         anchors.fill: parent
@@ -466,6 +466,7 @@ ApplicationWindow {
                                     Layout.fillWidth: true
                                     tracking: true
                                     planningBusy: !!window.modelState.planningSaving
+                                    onEditContent: (identifier, linked) => window.backend.contentActions.region(identifier, linked)
                                     onPlanningEdit: (identifier) => window.backend.planningActions.edit(identifier)
                                     onPlanningComplete: (identifier, completed, token) => window.backend.planningActions.complete(identifier, completed, token)
                                     feedback: (window.modelState.tracking || {}).feedback || ({})
@@ -492,6 +493,18 @@ ApplicationWindow {
                                 placeholderText: qsTr("Buscar título, tag ou ID nesta página…  Ctrl+K")
                                 text: window.modelState.query
                                 onTextEdited: window.backend.setQuery(text)
+                            }
+                            ActionButton {
+                                text: qsTr("Nova nota")
+                                objectName: "new-note"
+                                visible: window.modelState.hasVault
+                                onClicked: window.backend.contentActions.create()
+                            }
+                            ActionButton {
+                                text: qsTr("Nova avaliação do período")
+                                objectName: "new-review"
+                                visible: window.modelState.hasVault
+                                onClicked: window.backend.contentActions.createReview()
                             }
                             DocumentList {
                                 Layout.fillWidth: true
@@ -613,6 +626,7 @@ ApplicationWindow {
         backend: window.backend
         modelState: window.modelState
     }
+    ContentDialog { backend: window.backend; modelState: window.modelState }
     PlanningDialog { backend: window.backend; modelState: window.modelState }
     HabitDialog {
         backend: window.backend

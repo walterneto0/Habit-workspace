@@ -5,6 +5,7 @@ from datetime import date, timedelta
 from PySide6.QtCore import QObject, Slot
 
 from habit_workspace.application.planning import query_report
+from habit_workspace.domain.planning import goal_home, planning_from_mapping
 from habit_workspace.domain.temporal import PeriodRef, TemporalScope
 
 
@@ -31,6 +32,8 @@ class PlanningActions(QObject):
         period = w.navigation.period_ref or PeriodRef.containing("day", w.today)
         self.loaded = None
         self.form = dict(
+            home=str(period),
+            cadence="home_only",
             open=True,
             kind=kind,
             title="",
@@ -60,9 +63,16 @@ class PlanningActions(QObject):
         hw = loaded.document.metadata["hw"]
         if loaded.document.kind not in ("task", "goal"):
             return
+        row = next((r for r in self.rows() if r["id"] == identifier), {})
+        if row.get("followup_period"):
+            w.content.followup(identifier, row["followup_period"])
+            return
         self.loaded = loaded
         end = hw["scope"]["end_exclusive"]
+        home = goal_home(hw, planning_from_mapping(hw).scope) if hw["kind"] == "goal" else None
         self.form = dict(
+            home=str(home) if home else "",
+            cadence=hw.get("tracking", {}).get("granularity", "home_only"),
             open=True,
             kind=hw["kind"],
             title=hw["title"],
@@ -106,6 +116,10 @@ class PlanningActions(QObject):
                 fields["due_date"] = date.fromisoformat(f["due"]) if f["due"].strip() else None
             else:
                 fields.update(
+                    home_period_ref=str(PeriodRef(f["home"])),
+                    tracking={"mode": "home_only"}
+                    if f["cadence"] == "home_only"
+                    else {"mode": "periodic", "granularity": f["cadence"]},
                     status=f["status"],
                     progress_percent=int(f["progress"]) if f["progress"].strip() else None,
                 )

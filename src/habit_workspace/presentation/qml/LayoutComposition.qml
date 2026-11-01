@@ -17,6 +17,7 @@ GridLayout {
     property bool planningBusy: false
     signal planningEdit(string identifier)
     signal planningComplete(string identifier, bool completed, string token)
+    signal editContent(string identifier, string linked)
     signal details(string identifier)
     signal checkin(string habitId, string state, string token)
     signal observe(string fieldId, string blockId, string text, string token)
@@ -200,6 +201,14 @@ GridLayout {
                     text: card.modelData.imageSource ? (card.modelData.config.alt || "") : card.modelData.detail || ({note: qsTr("Nota sem conteúdo vinculado. Edição na Fase 7."), list: qsTr("Lista vazia · captura na Fase 7."), table: qsTr("Tabela sem colunas configuradas."), chart: qsTr("Nenhuma fonte selecionada."), image: qsTr("Imagem indisponível. Importação de mídia na Fase 7."), section: qsTr("Seção")}[card.modelData.type] || qsTr("Valores são preenchidos no modo de acompanhamento da página."))
                     textFormat: Text.PlainText
                     color: Theme.secondary
+                }
+                LocalImages { Layout.fillWidth: true; images: card.modelData.noteImages || [] }
+                ActionButton {
+                    objectName: "edit-content-" + (card.modelData.id || "")
+                    visible: !root.editing && !root.preview && card.modelData.type === "note"
+                    text: card.modelData.noteLinked ? qsTr("Editar nota independente") : qsTr("Editar texto da página")
+                    enabled: !root.planningBusy
+                    onClicked: root.editContent(card.modelData.noteRegion || "", card.modelData.noteLinked || "")
                 }
                 Flow {
                     Layout.fillWidth: true

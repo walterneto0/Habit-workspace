@@ -43,6 +43,7 @@ KIND_LABELS = {
     "task": "Tarefa",
     "goal": "Objetivo",
     "note": "Nota",
+    "review": "Avaliação",
     "page": "Página",
     "year_page": "Página anual",
     "month_page": "Página mensal",
@@ -62,14 +63,14 @@ def local_path(value: str) -> Path:
     return Path(value).expanduser().absolute()
 
 
-def excerpt(body: str) -> str:
+def excerpt(body: str, limit: int | None = 6000) -> str:
     """Inert text summary, not an HTML/Markdown/resource renderer."""
     text = re.sub(r"<!--.*?-->", "", body, flags=re.S)
     text = re.sub(r"!\[([^\]]*)\]\([^)]*\)", r"[Imagem: \1]", text)
     text = re.sub(r"\[([^\]]+)\]\([^)]*\)", r"\1", text)
     text = re.sub(r"(?m)^\s{0,3}#{1,6}\s+", "", text)
     text = re.sub(r"(?m)^```[^\n]*$", "", text)
-    return text.strip()[:6000]
+    return text.strip()[:limit]
 
 
 class WorkspaceController(QObject):
@@ -108,6 +109,9 @@ class WorkspaceController(QObject):
         from habit_workspace.presentation.planning import PlanningActions
 
         self.planning = PlanningActions(self)
+        from habit_workspace.presentation.content import ContentActions
+
+        self.content = ContentActions(self)
         self.date_timer = QTimer(self)
         self.date_timer.setInterval(self.DATE_CHECK_MS)
         self.date_timer.timeout.connect(self.refreshDate)
@@ -129,6 +133,10 @@ class WorkspaceController(QObject):
     @Property(QObject, constant=True)
     def planningActions(self):
         return self.planning
+
+    @Property(QObject, constant=True)
+    def contentActions(self):
+        return self.content
 
     def _composition(self):
         if not self.session or not self.navigation.period:
@@ -249,7 +257,13 @@ class WorkspaceController(QObject):
         if current == self.today:
             return False
         previous, self.today = self.today, current
-        busy = bool(self.studio.draft or self._habit_form or self.planning.form or self._pending)
+        busy = bool(
+            self.studio.draft
+            or self._habit_form
+            or self.planning.form
+            or self.content.form
+            or self._pending
+        )
         if self._detail_day == previous:
             self._detail_day = current
         if self.navigation.anchor == previous and self._capture_day is None and not busy:
@@ -564,6 +578,9 @@ class WorkspaceController(QObject):
         return True
 
     def _guard_studio(self):
+        if self.content.form:
+            self._notice_message("Salve ou cancele a edição de conteúdo antes de sair.", True)
+            return True
         if self.planning.form:
             self._notice_message("Salve ou cancele a edição de planejamento antes de sair.", True)
             return True
@@ -661,7 +678,11 @@ class WorkspaceController(QObject):
             if str(d.document.id) == self._selected
         )
         row["previewType"] = (
-            "habit" if doc.kind == "habit" else "note" if doc.kind == "note" else "structured"
+            "habit"
+            if doc.kind == "habit"
+            else "note"
+            if doc.kind in ("note", "review")
+            else "structured"
         )
         row["fallback"] = (
             "Esta nota ainda não contém texto."
@@ -687,9 +708,22 @@ class WorkspaceController(QObject):
         row["returnLabel"] = (
             "Voltar ao acompanhamento" if self._return_context else "Acompanhar nesta data"
         )
-        row["excerpt"] = excerpt(doc.body)
-        row["truncated"] = len(doc.body) > 6000
+        row["excerpt"] = excerpt(doc.body, None if doc.kind in ("note", "review") else 6000)
+        row["truncated"] = doc.kind not in ("note", "review") and len(doc.body) > 6000
+        row["images"] = []
+        if doc.kind in ("note", "review"):
+            from habit_workspace.presentation.layout_assets import markdown_images
+
+            row["images"] = markdown_images(self.session.root, doc.body)
         row["records"] = []
+        if doc.kind == "review":
+            rating = doc.metadata["hw"].get("assessment", {}).get("rating")
+            row["records"].append(
+                {
+                    "label": "Avaliação manual do período",
+                    "value": str(rating) + "/5" if rating else "Não informada",
+                }
+            )
         states = {"done": "Concluído", "missed": "Falha declarada", "skipped": "Dispensado"}
         hw = doc.metadata["hw"]
         for record in hw.get("checkins", []):
@@ -712,17 +746,32 @@ class WorkspaceController(QObject):
             visible = [r for r in visible if r["documentKind"] == "habit"]
         else:
             visible = [
-                r for r in visible if r["documentKind"] in ("note", "page", "metric_definition")
+                r
+                for r in visible
+                if r["documentKind"] in ("note", "review", "page", "metric_definition")
             ]
         if self._query:
             query = self._query.casefold()
             visible = [
                 r
                 for r in visible
-                if query in " ".join(str(r[k]) for k in ("title", "tags", "id", "path")).casefold()
+                if query
+                in (
+                    " ".join(str(r[k]) for k in ("title", "tags", "id", "path"))
+                    + " "
+                    + next(
+                        (
+                            d.document.body
+                            for d in self.session.report.documents
+                            if str(d.document.id) == r["id"]
+                        ),
+                        "",
+                    )
+                ).casefold()
             ]
         recent = self.settings.value("recentVaults", [], type=list)
         state = {
+            "contentForm": self.content.form,
             "planning": self.planning.rows(),
             "planningForm": self.planning.form,
             "planningSaving": self.actions.busy,

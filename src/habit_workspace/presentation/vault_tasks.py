@@ -35,6 +35,39 @@ class _Job(QRunnable):
             if self.kind == "refresh":
                 if not opened:
                     session.scan()
+            elif self.kind in ("image_import", "content_media"):
+                from habit_workspace.presentation.layout_assets import import_image, markdown_images
+
+                result = (
+                    import_image(session.root, self.arguments["source"])
+                    if self.kind == "image_import"
+                    else markdown_images(session.root, self.arguments["body"])
+                )
+            elif self.kind == "content_save":
+                from habit_workspace.application.content import ContentService
+                from habit_workspace.application.planning import PlanningService
+                from habit_workspace.domain.temporal import PeriodRef
+
+                loaded = self.arguments["loaded"]
+                values = self.arguments["values"]
+                if values["followup"]:
+                    result = PlanningService(session).followup(
+                        loaded, PeriodRef(values["followup"]), values["body"]
+                    )
+                else:
+                    service = ContentService(session)
+                    rating = values.get("rating", "")
+                    args = dict(
+                        title=values["title"],
+                        body=values["body"],
+                        period=values["period"],
+                        rating=int(rating) if str(rating).strip() else None,
+                    )
+                    result = (
+                        service.save(loaded, region=values["region"], **args)
+                        if loaded
+                        else service.create(kind=values.get("kind", "note"), **args)
+                    )
             elif self.kind in ("planning_save", "planning_complete"):
                 from habit_workspace.application.planning import PlanningService
 

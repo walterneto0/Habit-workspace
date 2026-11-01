@@ -174,6 +174,14 @@ class CaptureActions(QObject):
         if report is not None:
             w.session.report = report
             w.session.index_error = index_error
+        if kind in ("image_import", "content_media"):
+            w.content.media_completed(kind, result, error)
+            return
+        if kind == "content_save":
+            w.content.completed(error)
+            if report is not None:
+                w.watcher.accept_report(report)
+            return
         if kind.startswith("planning_"):
             w.planning.completed(kind, error)
             if report is not None:

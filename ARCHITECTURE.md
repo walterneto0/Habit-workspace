@@ -175,3 +175,39 @@ planning operations through VaultTasks. The worker owns its session, serializes
 capture/refresh/planning writes, and drains accepted writes on orderly shutdown.
 Task layout rows route to PlanningActions, never CaptureService. Goals have no
 implicit links or calculated progress. SQLite needs no new canonical tables.
+
+## Phase 7B direction — contents and scope-aware queries
+
+The Phase 7A planning projection (`application/planning.py::query_report`)
+used scope overlap at the Phase 7A baseline. Phase 7B corrected this
+behavior (see the implementation sections below). The reviewed direction was to
+separate `home_period_ref`, `TemporalScope`, and optional tracking cadence,
+while retaining stable UUIDs and canonical records. Normal child-period pages
+show linked follow-ups only when explicitly configured, not full parent goals.
+
+Reuse `DocumentRepository`/`VaultSession` and serialized `VaultTasks` for note
+and review writes. The existing `NoteConfig`, image decoder, image path rules,
+and period navigation are starting points; avoid duplicate stores and engines.
+New review data must be Markdown-backed, not SQLite-only. Do not manufacture
+daily observations for weekly/monthly/yearly reviews. See
+`docs/planning/phase-7b-direction.md` for detailed acceptance and boundaries.
+
+### Phase 7B execution 1
+ContentService edits canonical standalone notes or a validated page-region slice.
+ContentActions owns drafts and immutable loaded revisions; content_save uses the
+existing serialized VaultTasks queue. Worker failures reconcile the scan without
+replacing the draft. No domain code depends on Qt. Goal follow-ups are upserts in
+the enclosing goal document with optimistic file revision checking; no derived
+progress or daily observation is produced. Tracking edits retain historical
+records and unknown compatible keys.
+
+### Phase 7B final
+Review uses the existing ContentService/ContentActions/VaultTasks save pipeline,
+Document schema validation, scanner and disposable index. Optional rating is an
+explicit period-level manual assessment, never a typed daily observation.
+Image selection dispatches bounded reads/decode and create-only asset publication
+on the existing serialized worker. Layout imports retain the target block UUID
+and draft identity; notes retain the whole form before dispatch. A bounded pixel
+cache uses path, inode, size, mtime and ctime; containment is checked even on hits.
+Only validated data PNG URLs reach QML. Raw Markdown/HTML/remote image URLs never
+become QML resource URLs. Failed/cancelled reference saves can leave orphan assets.

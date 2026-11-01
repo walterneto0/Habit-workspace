@@ -19,6 +19,7 @@ class DocumentKind(StrEnum):
     TASK = "task"
     GOAL = "goal"
     NOTE = "note"
+    REVIEW = "review"
     PAGE = "page"
     DAY = "day_page"
     WEEK = "week_page"
@@ -162,6 +163,19 @@ class Document:
         if "origin_page_id" in hw and hw["origin_page_id"] is not None:
             uuid_value(hw["origin_page_id"], "origin_page_id")
         self._validate_period(hw)
+        if self.kind == DocumentKind.REVIEW:
+            require(
+                isinstance(hw.get("title"), str) and bool(hw["title"].strip()),
+                "Review requires title",
+            )
+            require(isinstance(hw.get("period"), str), "Review requires exactly one period")
+            if "assessment" in hw:
+                assessment = mapping(hw["assessment"], "assessment")
+                rating = assessment.get("rating")
+                require(
+                    rating is None or (type(rating) is int and 1 <= rating <= 5),
+                    "Manual rating must be an integer 1–5",
+                )
         if self.kind == DocumentKind.HABIT:
             require(
                 isinstance(hw.get("name"), str) and bool(hw["name"].strip()), "Habit needs name"

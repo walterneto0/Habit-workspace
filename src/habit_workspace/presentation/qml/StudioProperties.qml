@@ -1,10 +1,17 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import QtQuick.Dialogs
 import "StudioLabels.js" as Labels
 
 ColumnLayout {
     id: root
+    FileDialog {
+        id: imagePicker
+        title: qsTr("Importar imagem local")
+        nameFilters: [qsTr("Imagens (*.png *.jpg *.jpeg *.webp *.gif)")]
+        onAccepted: root.studio.importImage(selectedFile.toString())
+    }
     required property var studio
     readonly property var state: studio ? studio.state : ({})
     readonly property var current: state.current || ({})
@@ -176,6 +183,7 @@ ColumnLayout {
     ColumnLayout {
         visible: root.current.type === "image"
         Layout.fillWidth: true
+        ActionButton { objectName: "layout-image-import"; text: qsTr("Selecionar e importar imagem local"); enabled: !root.state.busy; onClicked: imagePicker.open() }
         Input { Layout.fillWidth: true; placeholderText: qsTr("Caminho relativo da imagem local"); text: root.config.path || ""; onEditingFinished: root.studio.edit("path", text) }
         Input { Layout.fillWidth: true; placeholderText: qsTr("Descrição acessível da imagem"); text: root.config.alt || ""; onEditingFinished: root.studio.edit("alt", text) }
         StudioChoice { Layout.fillWidth: true; model: Labels.choices(["contain", "cover"]); textRole: "name"; valueRole: "value"; label: qsTr("Ajuste da imagem"); currentIndex: model.findIndex(v => v.value === root.config.fit); onActivated: root.studio.edit("fit", currentValue) }

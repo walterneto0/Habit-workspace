@@ -5,11 +5,9 @@ planning data across year, month, ISO-week, and day views. Its design goal is a
 local-first workspace where readable files, not a server account or database, are
 the durable source of truth.
 
-> **Status: pre-alpha.** Phases 0–4 and 6 are implemented; Phase 5 is partial.
-> Habits and typed values can be recorded per day, but it is not a finished habit
-> tracker. Complete layout editing, charts, and backup/export workflows are
-> incomplete. Use test or disposable data and keep
-> independent backups.
+> **Status: pre-alpha.** Phases 0–4, the main Layout Studio workflow,
+> Phase 6/6.5, Phase 7A tasks/goals and Phase 7B content/reflection are
+> implemented and tested. Events/calendar, charts and backup/export remain pending. Use disposable data and keep independent backups.
 
 The initial application interface language is Brazilian Portuguese. Repository
 documentation is in English.
@@ -26,17 +24,23 @@ documentation is in English.
 - Versioned declarative JSON layout templates, period assignments and defaults,
   immutable revisions, typed metric definitions, and canonical dated
   observations.
-- Dynamic metric-source discovery and manual source selections in the domain
-  layer. These are not yet a chart-rendering or habit-capture UI.
+- Dynamic metric-source discovery, manual source selections, direct habit
+  check-ins and typed observation capture. Calculated charts remain pending.
+- Direct task and goal planning (Phase 7A): canonical records, search,
+  deadlines, carryover, goal progress, and task list/checklist bindings.
+- Explicit goal ownership/cadence, linked period follow-ups with independent
+  manual overall progress; full-length notes and validated page-local regions.
+- Exact-period Markdown reviews with optional manual rating, safe local raster
+  import into Assets/, alternative text, and offline images in notes/layouts.
 - Tests and verification scripts for persistence, temporal behavior, layout
   contracts, and offscreen Qt/QML startup.
 
-See the [roadmap](ROADMAP.md) and
-[verification reports](docs/verification/phase-0.md) for phase details.
+See the [roadmap](ROADMAP.md), [Phase 7A CI report](docs/verification/phase-7a.md)
+and [Phase 7B final verification](docs/verification/phase-7b-final.md) for phase details.
 
 Concrete period pages now offer **Abrir Layout Studio**: add/select/reorder/resize
 blocks, preview, undo/redo and save a new immutable revision for that period.
-New metrics require an explicit choice and are saved separately. Capture and chart
+New metrics require an explicit choice and are saved separately. Chart
 calculations remain unavailable. See [verification and limitations](docs/verification/phase-5.md)
 and [keyboard operations](docs/layout-studio-shortcuts.md).
 
@@ -49,7 +53,7 @@ written to the canonical day file. See [Phase 6 verification](docs/verification/
 
 - Complete Phase 5 acceptance: comprehensive component properties, specialized
   input shapes, validated pointer drag/drop and native visual review.
-- Finished task, goal, event, rich-note, and image workflows.
+- Events and calendar (Phase 7C).
 - Chart rendering and broader analytics/rollups.
 - Self-contained dependency export, integrated backup, and recovery UX.
 - Native desktop accessibility/platform validation or mobile support.
@@ -122,6 +126,7 @@ QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software .venv/bin/python -m habit_wo
 .venv/bin/python tools/verify_phase2.py
 .venv/bin/python tools/verify_phase3.py
 QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software .venv/bin/python tools/verify_phase6.py
+QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software .venv/bin/python tools/verify_phase7a.py
 ```
 
 The pytest suite includes offscreen Qt/QML startup and the Phase 2 input/render
@@ -130,7 +135,7 @@ These checks do not replace testing with a native window manager, graphics
 hardware, platform file dialogs, and assistive technology.
 
 Before submitting changes, run the full checks above. Keep changes scoped to an
-approved roadmap phase; do not begin Phase 5 as part of repository maintenance.
+approved roadmap phase; do not introduce unrelated features as maintenance.
 Never commit vault data, credentials, generated files, or dependency artifacts.
 
 ## Roadmap
@@ -144,7 +149,9 @@ Never commit vault data, credentials, generated files, or dependency artifacts.
 | 4 — Layout, field, assignment, and observation contracts | Complete |
 | 5 — Visual Layout Studio and renderer | Partial; integrated workflow available |
 | 6 — Habit and structured capture | Implemented; awaiting owner review |
-| 7 — Planning, notes, images, and calendar | Pending |
+| 7A — Tasks and goals | Implemented; CI verified |
+| 7B — Notes, reviews, images and tracking policy | Implemented; ready for review |
+| 7C — Events, agenda and selected transfer | Pending |
 | 8 — Charts and cross-period rollups | Pending |
 | 9 — Packages, backup, stabilization, and distribution | Pending |
 
@@ -174,3 +181,20 @@ retain their own licenses and notices; see
 
 See the [licensing notes](docs/licensing-review.md) for contributor copyright,
 dependency, and future commercial licensing considerations.
+
+## Phase 7B content workflows
+
+Use **Nova nota** or **Nova avaliação do período** directly from the workspace.
+Reviews require an exact period (for example week/2026-W53); their optional 1–5
+rating is manual, with no derived scoring. Multiple reviews per period are allowed.
+The note/review editor saves asynchronously and preserves drafts after conflicts.
+Use **Inserir imagem local** with alternative text, then **Prévia segura** to see
+local images. PNG/JPEG/WebP/GIF imports are limited to 2 MiB and 4 million pixels.
+Layout Studio image properties also offer a local image picker; save a new layout
+revision after import. Failed/cancelled saves may leave an unreferenced asset.
+
+The Markdown preview uses inert text and validated local image thumbnails, with
+no HTML execution or remote fetching. Existing page-region markers are required;
+missing/ambiguous markers are reported without automatic repair. External-edit
+conflicts retain drafts and require explicit reopen; there is no merge editor.
+See [full acceptance instructions and evidence](docs/verification/phase-7b-final.md).
