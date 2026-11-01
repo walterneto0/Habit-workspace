@@ -18,8 +18,8 @@ PeriodRef, TemporalScope e recorrência; arquivos `.md` de hábitos e outros ite
 Aceite: um hábito aparece nas visões pertinentes sem duplicar arquivo; renomear/mover arquivo não quebra referência.
 
 Implementada e verificada: [relatório da Fase 3](docs/verification/phase-3.md).
-Entidade de hábito e notas/páginas existentes preservadas; tarefas, objetivos e
-eventos continuam na Fase 7.
+Entidade de hábito e notas/páginas existentes preservadas; tarefas e objetivos
+foram implementados na Fase 7A; eventos permanecem na Fase 7C.
 
 ## Fase 4 — Contrato de layouts e campos (testes de domínio antes de UI)
 Layouts JSON versionados, assignment único por período/instante, template de tipo como fallback, histórico de ativação, campos tipados estáveis, observações canônicas datadas; resolver e testes de colisão de vigência.
@@ -39,7 +39,7 @@ verificadas: [relatório 5.1](docs/verification/phase-5-ux-refinement.md).
 Aceite técnico do editor para essa jornada atendido; revisão humana de acessibilidade
 e validação em outras plataformas permanecem pendentes. Notas/listas editáveis,
 captura de linhas de tabelas e gráficos calculados continuam nas fases posteriores.
-Nenhuma implementação da Fase 7 foi iniciada.
+Este trecho registra o estado histórico da Fase 5.1; a Fase 7A foi concluída depois.
 
 ## Fase 6 — Hábitos e captura estruturada
 Check-ins vinculados a hábito por UUID e observações vinculadas a Fields por UUID, arquivo diário canônico; tags, busca e escopo/recorrência.
@@ -64,11 +64,31 @@ Direção: [phase-6-5-direction.md](docs/planning/phase-6-5-direction.md).
   captura direta de hábitos, integração com layouts, abertura assíncrona de cofre,
   integridade de persistência e jornada Qt foram verificadas. Resultados de
   desempenho, limitações e plataformas ainda não verificadas constam no relatório.
-  Nenhuma funcionalidade da Fase 7 foi iniciada.
+  Este trecho registra o estado histórico da Fase 6.5B; a Fase 7A foi concluída depois.
 
-## Fase 7 — Agenda, notas, imagens e planejamento
-Tarefas, objetivos, avaliações, eventos e notas; bloco de texto Markdown com marcador por ID, imagens em Assets; agenda referenciando dados canônicos.
-Aceite: exportar/importar itens com dependências, preservar notas/imagens e abrir em outro cofre.
+## Fase 7 — Planejamento, conteúdo e agenda
+
+### Fase 7A — Tarefas e objetivos (implementada; CI aprovada)
+Documentos Markdown canônicos, planejamento direto, prazos, progresso manual
+e integração de tarefas a listas/checklists. Consulte
+[verificação 7A](docs/verification/phase-7a.md).
+A projeção por interseção da 7A foi substituída na 7B por propriedade e cadência explícitas.
+
+### Fase 7B — Conteúdo, reflexão e regra de acompanhamento (implementada; para revisão)
+Notas Markdown e blocos de texto editáveis, avaliações por período e importação
+segura de imagens. Separar explicitamente período de propriedade, escopo e
+frequência de acompanhamento. Objetivos anuais sem acompanhamento inferior
+não aparecem automaticamente em meses, semanas ou dias. Consulte
+[direção 7B](docs/planning/phase-7b-direction.md) para requisitos e
+[verificação final](docs/verification/phase-7b-final.md) para evidências, contratos e limitações.
+
+### Fase 7C — Eventos, agenda e transferência seletiva (pendente)
+Eventos e agenda derivada de itens canônicos; transferência selecionada com
+dependências sem antecipar o pacote/backup completo da Fase 9.
+
+**Aceite global da Fase 7:** notas, avaliações, imagens, planejamento e
+agenda persistem e reabrem; links por UUID resistem a reindexação;
+referências e dependências ausentes são visíveis. Nunca duplicar registros.
 
 ## Fase 8 — Gráficos e rollups entre escalas
 Blocos de gráfico por ano/mês/semana, seleção manual ou tags dinâmicas, agregadores tipados e estado de dados ausentes; widget mensal padrão detecta fontes novas por tag/consulta.

@@ -417,3 +417,90 @@ Include the decisions that need discussion.
 A goal substitutes `kind: goal`, uses one of the goal statuses, and may include
 `progress_percent: 37`. It has no deadline/completion contract. Unknown compatible
 extensions remain inert. There is no schema-version rewrite when opening a vault.
+
+## Phase 7B — proposed owner/cadence and content contracts
+
+**Not implemented by Phase 7A.** This section corrects the scope-intersection
+presentation policy described earlier: for goals, `TemporalScope` alone does
+not imply default visibility on every intersecting child period. The goal's
+logical home period and explicit tracking cadence are separate concerns.
+
+The conceptual proposal adds `home_period_ref` and `tracking` to schema-v4 goal
+metadata (see `docs/planning/phase-7b-direction.md`). **Validate and finalize**
+their precise field values, allowed granularity, legacy fallback and historical
+follow-up storage before implementing. Existing goals lacking them must remain
+readable/discoverable without silent migration or data loss. `origin_page_id`
+remains historical provenance and is not a substitute for home period.
+
+Page-local text retains Markdown between the existing
+`<!-- hw:content id="UUID" -->` / `<!-- /hw:content -->` markers. Determine
+content identity from `NoteConfig.content_id`, falling back to block UUID.
+Preserve other regions and surrounding text; ambiguous/nested/duplicate markers
+must not overwrite content. Standalone `kind: note` documents are distinct
+canonical editing targets.
+
+`kind: review` was not supported at this planning checkpoint; the final
+Phase 7B contract below now supersedes this paragraph.
+Specify schema-v4 period identity, title/label, tags and Markdown commentary
+before coding, then add the kind to domain validation and tests. One ISO-week
+review must not be stored as fabricated daily observations; typed values must
+have exactly one canonical source of truth. Assets are local, vault-relative
+and independently validated; importing an image is not Phase 9 packaging.
+
+### Phase 7B implementation checkpoint: home-only goals
+
+New goals persist `home_period_ref` (validated PeriodRef) and
+`tracking: {mode: home_only}`. Periodic tracking is not implemented or offered.
+Ordinary period queries show goals only in their home period, independently of
+scope. Legacy goals infer home only from an exact year/month/ISO-week/day scope,
+in that deterministic order, without rewriting files. Custom/open legacy scopes
+remain available in global planning/search, labeled as having no defined period.
+Task deadlines/carryover and habit recurrence retain their existing rules.
+This checkpoint does not complete Phase 7B.
+
+### Phase 7B execution 1 contract (supersedes checkpoint limitations)
+
+Goals accept tracking.mode home_only or periodic; periodic requires granularity
+month/week/day strictly below the home scale (year > month > week > day).
+home_period_ref is independent of scope and origin. Legacy exact-scope inference
+is unchanged; custom legacy homes must be explicitly chosen before tracking.
+Follow-ups live solely in the goal's hw.followups list: id UUID, goal_id equal to
+the enclosing goal UUID, period canonical PeriodRef, commentary Markdown string.
+One record per exact period; UUID and unknown keys survive edits. No percentage
+is stored: commentary is historical follow-up information, current overall manual
+progress remains solely progress_percent. Changing tracking never deletes history.
+New records require cadence and nonempty scope intersection; existing history
+can be edited after policy changes. Boundary weeks retain one ISO identity.
+
+Standalone notes use existing kind note, title and optional hw.period. The body
+is full Markdown. Updates preserve serializer hints, unknown metadata and identity.
+Page regions resolve content_id then block UUID. Exact opening/closing markers
+must be balanced, nonnested and unique throughout the document. Missing or invalid
+regions are read-only, never automatically repaired. Only the selected region's
+interior is replaced. Block deletion does not invoke content deletion.
+All writes use VaultSession optimistic revisions and the serialized VaultTasks
+worker. Failed saves keep form drafts. Preview displays inert plain Markdown;
+HTML and resource URLs are never executed or fetched.
+
+## Phase 7B final — reviews and local images
+
+Schema 4 adds kind review: id UUID, nonempty title, exactly one mandatory period
+(year/month/ISO week/day PeriodRef), optional tags, Markdown body commentary.
+Optional hw.assessment is a mapping with nullable rating: integer 1–5 (manual
+subjective assessment of this exact period). It is neither a metric observation
+nor an aggregate; nothing infers it or copies it into daily records. Unknown
+compatible assessment keys survive edits. Multiple independently identified
+reviews per period are allowed. Reviews without assessment remain valid.
+Files default to Reviews/<uuid>.md; paths do not define identity. No migration.
+
+Images retain ImageConfig and the existing 2 MiB/4,000,000-pixel decoder limits.
+Import accepts actual PNG/JPEG/WebP/GIF matching the selected file extension.
+Sources and destination ancestors must be nonsymlinks. Files are published
+create-only at Assets/<uuid>.<extension>. No remote retrieval. Markdown insertion
+uses ![escaped alternative text](Assets/<uuid>.<extension>); only safe local
+Assets references are decoded for notes/reviews. Layout images retain vault-relative
+ImageConfig paths for compatibility. HTML and arbitrary resource URLs are inert.
+GIF displays its first decoded frame. Validated pixels are cached with bounded
+memory by file revision, never canonicalized into SQLite/layouts as content.
+Import is asynchronous; cancellation or failed document/layout saving may leave
+an unreferenced asset. Assets are never silently deleted or overwritten.

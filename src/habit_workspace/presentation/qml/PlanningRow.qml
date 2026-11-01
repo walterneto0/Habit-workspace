@@ -9,7 +9,7 @@ ColumnLayout {
     signal edit()
     signal complete()
     spacing: 4
-    UiText { Layout.fillWidth: true; text: (root.row.kind === "goal" ? qsTr("Objetivo · ") : qsTr("Tarefa · ")) + root.row.title; font.weight: Font.Medium }
+    UiText { Layout.fillWidth: true; text: (root.row.followup_period ? qsTr("Acompanhamento do objetivo · ") : root.row.kind === "goal" ? ((root.row.home_period_ref || "").startsWith("year/") ? qsTr("Objetivo anual · ") : qsTr("Objetivo · ")) : qsTr("Tarefa · ")) + root.row.title; font.weight: Font.Medium }
     UiText { Layout.fillWidth: true; text: root.row.conflict ? qsTr("Referência ausente, incompatível ou UUID ambíguo") : root.row.category + " · " + root.row.scope; color: root.row.conflict ? Theme.warning : Theme.secondary; font.pixelSize: 12 }
     UiText {
         Layout.fillWidth: true

@@ -130,3 +130,24 @@ Fonte sans legível com pesos regulares e médios, de licença adequada à distr
   blocos alterados, fontes novas e vigência; confirma a preservação do histórico.
 - Animações dos diálogos, biblioteca e controles respeitam `Theme.duration`, que
   vale zero com movimento reduzido. Foco visível e navegação Tab são obrigatórios.
+
+## Phase 7B — goal tracking choice and content editing
+
+Show **Pertence ao período** and **Acompanhar** as distinct, comprehensible
+controls. Goal tracking defaults to **Somente neste período**; offer only
+smaller compatible calendar scales. Child pages display a lightweight
+`Acompanhamento do objetivo` reference when selected, not a full duplicate of
+the annual goal. Dates crossing ISO week/month boundaries need clear labels.
+
+Note/review editing should be possible outside Layout Studio, with safe
+Markdown editing and preview, keyboard focus, autosizing, explicit save/dirty
+states and draft-preserving conflict feedback. Image selection must show
+allowed formats, missing-resource states and accessible alt text. Never show
+interactive controls for cadence features that do not actually persist.
+
+### Phase 7B delivered controls
+Nova avaliação do período opens the shared Markdown editor with mandatory exact
+period and optional Avaliação manual (1–5). Inserir imagem local uses the system
+file picker with explicit format/size limits and a separate alternative-text
+field. Prévia segura shows inert text plus local image thumbnails and errors.
+Saving/import states disable repeat submissions; failures preserve form text.

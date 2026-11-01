@@ -60,7 +60,7 @@ def test_visibility_and_goal_independence(tmp_path):
     for period in ("day/2026-10-29", "week/2026-W44", "month/2026-10", "year/2026"):
         rows = query_report(session.report, PeriodRef(period), date(2026, 10, 29))
         assert len({r["id"] for r in rows}) == len(rows)
-        assert str(goal.document.id) in {r["id"] for r in rows}
+        assert (str(goal.document.id) in {r["id"] for r in rows}) == (period == "year/2026")
     assert query_report(session.report, PeriodRef("day/2026-10-29"), date(2026, 10, 29))[0]
     past = query_report(session.report, PeriodRef("day/2026-10-21"), date(2026, 10, 29))
     assert all(r["title"] != "Old" for r in past)
@@ -196,3 +196,34 @@ def test_goal_roundtrip_and_independent_progress(tmp_path):
     assert len(ImportService(target).import_files([goal.path]).skipped) == 1
     goal = service.update(goal, title="Changed")
     assert len(ImportService(target).import_files([goal.path]).conflicting) == 1
+
+
+def test_legacy_goal_home_inference_and_global_discovery(tmp_path):
+    from habit_workspace.domain.temporal import TemporalScope
+
+    session = VaultSession.create(tmp_path / "vault", "Test")
+    service = PlanningService(session)
+    for ref in ("year/2026", "month/2026-10", "week/2026-W44", "day/2026-10-29"):
+        goal = service.create(kind="goal", title=ref, period=PeriodRef(ref))
+        doc = deepcopy(goal.document)
+        doc.metadata["hw"].pop("home_period_ref", None)
+        doc.metadata["hw"].pop("tracking", None)
+        goal = session.save(goal, doc)
+        raw = goal.path.read_bytes()
+        rows = query_report(session.report, PeriodRef(ref), date(2026, 10, 29))
+        assert str(goal.document.id) in {r["id"] for r in rows}
+        assert goal.path.read_bytes() == raw
+    custom = service.create(
+        kind="goal",
+        title="Custom",
+        period=PeriodRef("year/2026"),
+        scope=TemporalScope(date(2026, 2, 3), date(2026, 5, 7)),
+    )
+    doc = deepcopy(custom.document)
+    doc.metadata["hw"].pop("home_period_ref", None)
+    doc.metadata["hw"].pop("tracking", None)
+    session.save(custom, doc)
+    rows = query_report(session.report, None, date(2026, 10, 29), "Custom")
+    assert len(rows) == 1
+    assert rows[0]["category"] == "Objetivo legado · período não definido"
+    assert not query_report(session.report, PeriodRef("month/2026-03"), date(2026, 3, 1), "Custom")

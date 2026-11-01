@@ -133,3 +133,26 @@ Desktop offline funcional, com páginas temporais, blocos configuráveis, criaç
 - Uma semana entre meses pode ter registros diários em cada mês; métricas semanais indivisíveis exigem regra de atribuição.
 - Excluir componente, trocar versão ou transferir página nunca apaga registros canônicos automaticamente.
 - Leia `LAYOUT_ENGINE.md` antes de modelar Layout Studio, campos e analytics.
+
+## Adendo v4 — propriedade do período e cadência explícita
+
+Decisão confirmada: o período de propriedade do item (`home_period_ref`), seu
+`TemporalScope` e a frequência de acompanhamento (`tracking`) são distintos.
+Escopo anual **não** implica visibilidade mensal/semanal/diária. Novos objetivos
+pertencem por padrão somente ao período escolhido; se a pessoa desejar
+acompanhar mensalmente, semanalmente ou diariamente, precisa escolher isso
+explicitamente. A página menor recebe uma **referência de acompanhamento** ao
+mesmo objetivo, nunca outro objetivo canônico.
+
+Tarefas são ações canônicas de conclusão única, sem ocorrências diárias
+fabricadas; prazo/pendência e busca global são projeções distintas. Hábitos
+conservam a recorrência e check-ins existentes, sem mudança silenciosa.
+Notas e avaliações só aparecem no período associado ou onde deliberadamente
+vinculadas. A ausência de um acompanhamento não é fracasso declarado.
+
+**Implementação 7B:** objetivos têm propriedade e cadência explícitas;
+acompanhamentos guardam comentários por período sem inferir progresso. Notas,
+regiões locais e avaliações exatas têm edição assíncrona com preservação de
+rascunhos. Avaliações aceitam nota manual opcional de 1 a 5, sem gerar observações
+diárias. Imagens locais validadas são importadas para Assets e exibidas offline.
+Veja FILE_FORMAT.md e docs/verification/phase-7b-final.md para contratos e limites.

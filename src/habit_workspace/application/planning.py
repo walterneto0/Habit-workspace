@@ -9,7 +9,7 @@ from habit_workspace.application.vault import VaultSession
 from habit_workspace.domain.documents import Document, require
 from habit_workspace.domain.habits import normalize_tags
 from habit_workspace.domain.layouts.components import Component
-from habit_workspace.domain.planning import planning_from_mapping
+from habit_workspace.domain.planning import goal_home, planning_from_mapping
 from habit_workspace.domain.temporal import PeriodRef, TemporalScope
 from habit_workspace.vault.scanner import LoadedDocument, ScanReport
 
@@ -49,6 +49,9 @@ class PlanningService:
             page = period_page(self.session.report, period)
             if page:
                 hw["origin_page_id"] = str(page.document.id)
+        if kind == "goal":
+            hw["home_period_ref"] = str(period)
+            hw["tracking"] = {"mode": "home_only"}
         hw.update(self._fields(fields))
         document = Document.from_metadata({"hw": hw}, body)
         folder = "Tasks" if kind == "task" else "Goals"
@@ -56,7 +59,15 @@ class PlanningService:
 
     @staticmethod
     def _fields(fields: dict[str, Any]) -> dict[str, Any]:
-        allowed = {"due_date", "status", "completed_at", "progress_percent", "origin_page_id"}
+        allowed = {
+            "due_date",
+            "status",
+            "completed_at",
+            "progress_percent",
+            "origin_page_id",
+            "home_period_ref",
+            "tracking",
+        }
         require(set(fields) <= allowed, "Unknown planning fields")
         return {
             k: v.isoformat()
@@ -93,8 +104,35 @@ class PlanningService:
                 start=scope.start.isoformat(),
                 end_exclusive=scope.end_exclusive.isoformat() if scope.end_exclusive else None,
             )
+        if "tracking" in fields:
+            incoming = fields["tracking"]
+            if isinstance(incoming, dict):
+                merged = dict(hw.get("tracking", {})) | incoming
+                if incoming.get("mode") == "home_only":
+                    merged.pop("granularity", None)
+                fields["tracking"] = merged
         hw.update(self._fields(fields))
         return self.session.save(loaded, document)
+
+    def followup(self, loaded, period, commentary):
+        item = planning_from_mapping(loaded.document.metadata["hw"])
+        require(item.kind == "goal", "Expected goal")
+        require(isinstance(commentary, str), "Commentary must be Markdown")
+        doc = deepcopy(loaded.document)
+        hw = doc.metadata["hw"]
+        records = hw.setdefault("followups", [])
+        record = next((r for r in records if r["period"] == str(period)), None)
+        if record is None:
+            tracking = hw.get("tracking", {})
+            require(
+                tracking.get("mode") == "periodic" and tracking.get("granularity") == period.scale,
+                "Período incompatível com acompanhamento.",
+            )
+            require(item.scope.intersects(period.scope), "Período fora do escopo.")
+            record = dict(id=str(uuid4()), goal_id=str(item.id), period=str(period))
+            records.append(record)
+        record["commentary"] = commentary
+        return self.session.save(loaded, doc)
 
     def complete(self, loaded: LoadedDocument, completed: bool, now: datetime) -> LoadedDocument:
         require(type(completed) is bool, "Completion must be boolean")
@@ -124,13 +162,40 @@ def query_report(
         item = planning_from_mapping(doc.metadata["hw"])
         if (
             query.casefold()
-            not in " ".join((item.title, doc.body, *item.tags, str(item.id))).casefold()
+            not in " ".join(
+                (
+                    item.title,
+                    doc.body,
+                    *item.tags,
+                    str(item.id),
+                    *(r["commentary"] for r in doc.metadata["hw"].get("followups", [])),
+                )
+            ).casefold()
         ):
             continue
         start, end = item.scope.start, item.scope.end_exclusive
         intersects = period is None or (
             start < period.scope.end_exclusive and (end is None or end > period.start)
         )
+        home = None
+        if item.kind == "goal":
+            home = goal_home(doc.metadata["hw"], item.scope)
+            tracking = doc.metadata["hw"].get("tracking", {})
+            followup = bool(
+                period
+                and period != home
+                and (
+                    (
+                        tracking.get("mode") == "periodic"
+                        and tracking.get("granularity") == period.scale
+                        and item.scope.intersects(period.scope)
+                    )
+                    or any(
+                        r["period"] == str(period) for r in doc.metadata["hw"].get("followups", [])
+                    )
+                )
+            )
+            intersects = period is None or period == home or followup
         deadline = bool(period and item.due_date and period.start <= item.due_date <= period.end)
         overdue = (
             item.kind == "task"
@@ -159,8 +224,23 @@ def query_report(
             category = "Pendente de período anterior" if carry else "Todos os períodos"
         if not intersects:
             category = "Prazo neste período" if deadline else "Pendente de período anterior"
+        if item.kind == "goal" and home is None:
+            category = "Objetivo legado · período não definido"
+        if item.kind == "goal" and period and followup:
+            category = (
+                "Acompanhamento "
+                + {"month": "mensal", "week": "semanal", "day": "diário"}[period.scale]
+                + " do objetivo"
+            )
+        display_start, display_end = start, end
+        if item.kind == "goal" and period and followup:
+            eligible = item.scope.intersection(period.scope)
+            if eligible:
+                display_start, display_end = eligible.start, eligible.end_exclusive
         rows.append(
             dict(
+                home_period_ref=str(home) if home else "",
+                followup_period=str(period) if item.kind == "goal" and period and followup else "",
                 id=str(item.id),
                 kind=item.kind,
                 title=item.title,
@@ -169,10 +249,10 @@ def query_report(
                 start=start.isoformat(),
                 end=(end.isoformat() if end else ""),
                 scope=(
-                    f"{start.isoformat()} → "
+                    f"{display_start.isoformat()} → "
                     + (
-                        (end - timedelta(days=1)).isoformat() + " (inclusivo)"
-                        if end
+                        (display_end - timedelta(days=1)).isoformat() + " (inclusivo)"
+                        if display_end
                         else "sem término"
                     )
                 ),

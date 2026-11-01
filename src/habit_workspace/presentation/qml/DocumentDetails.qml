@@ -54,6 +54,17 @@ ColumnLayout {
         }
     }
     ActionButton {
+        visible: ["note", "review"].indexOf(details.document.documentKind) >= 0 && !!details.document.period
+        text: qsTr("Abrir período associado")
+        onClicked: details.backend.contentActions.goPeriod(details.document.period)
+    }
+    ActionButton {
+        visible: ["note", "review"].indexOf(details.document.documentKind) >= 0
+        text: details.document.documentKind === "review" ? qsTr("Editar avaliação") : qsTr("Editar nota")
+        objectName: "edit-note"
+        onClicked: details.backend.contentActions.edit(details.document.id)
+    }
+    ActionButton {
         Layout.fillWidth: true
         text: qsTr("Revelar pasta do arquivo")
         glyph: "folder"
