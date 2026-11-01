@@ -11,6 +11,7 @@ ColumnLayout {
             required property var modelData
             Layout.fillWidth: true
             Image {
+                asynchronous: true
                 objectName: "local-image"
                 readonly property bool decoded: status === Image.Ready
                 Layout.fillWidth: true

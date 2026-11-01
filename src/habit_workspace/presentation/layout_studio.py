@@ -86,7 +86,9 @@ class SaveJob(QRunnable):
             )
 
 
-def composition(layout, report, root=None, draft_fields=None, capture=None, period=None):
+def composition(
+    layout, report, root=None, draft_fields=None, capture=None, period=None, images=None
+):
     """capture: optional CaptureSnapshot that adds tracking-mode values per block."""
     rows = []
     draft_fields = draft_fields or {}
@@ -142,7 +144,7 @@ def composition(layout, report, root=None, draft_fields=None, capture=None, peri
         if block.type == "note" and root:
             from habit_workspace.presentation.layout_assets import markdown_images
 
-            row["noteImages"] = markdown_images(root, row["detail"])
+            row["noteImages"] = markdown_images(root, row["detail"], images)
         selection = getattr(block.config, "selection", None)
         if selection:
             row["detail"] = (
@@ -173,14 +175,20 @@ def composition(layout, report, root=None, draft_fields=None, capture=None, peri
             from habit_workspace.presentation.layout_assets import image_source
 
             try:
-                row["imageSource"] = image_source(root, block.config.path)
+                row["imageSource"] = (
+                    images(block.config.path) if images else image_source(root, block.config.path)
+                )
+                if not row["imageSource"]:
+                    row["detail"] = "Carregando imagem…"
             except (ValueError, OSError) as error:
                 row["detail"] = "Imagem indisponível: " + str(error)
         if block.type == "section":
             nested = LayoutTemplate(
                 uuid4(), 1, "Seção", block.config.children, grid=Grid(block.config.columns)
             )
-            row["children"] = composition(nested, report, root, draft_fields, capture, period)
+            row["children"] = composition(
+                nested, report, root, draft_fields, capture, period, images
+            )
         rows.append(row)
     return rows
 
@@ -199,6 +207,9 @@ class LayoutStudio(QObject):
         self.instant = None
         self.busy = False
         self.job = None
+        from habit_workspace.presentation.layout_media import LayoutMedia
+
+        self.media = LayoutMedia(workspace, "studio", self.changed.emit)
 
     @Property("QVariantMap", notify=changed)
     def state(self):
@@ -206,7 +217,11 @@ class LayoutStudio(QObject):
             return {"active": False, "dirty": False, "busy": False}
         layout = self.draft.layout
         view = layout if self.preview else self.draft.view
-        blocks = composition(view, self.report, self.workspace.session.root, self.fields)
+        self.media.begin()
+        blocks = composition(
+            view, self.report, self.workspace.session.root, self.fields, images=self.media.source
+        )
+        self.media.finish()
         old = {b.id: b for b in self.draft.original.walk()}
         new = {b.id: b for b in layout.walk()}
         refs = {r.target_id for r in layout_references(layout)}

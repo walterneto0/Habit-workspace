@@ -54,6 +54,7 @@ def reopen_process(root):
         ui.click("content-cancel")
         ui.dialog_closed("ContentDialog")
         w.navigate("week", "2026-10-29")
+        wait(app, lambda: not w.actions.tasks.active)
         ui.settle()
         assert any(b.get("imageSource") for b in w.state["composition"]["blocks"])
         assert not ui.errors, ui.errors

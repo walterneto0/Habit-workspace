@@ -151,3 +151,14 @@ period and optional Avaliação manual (1–5). Inserir imagem local uses the sy
 file picker with explicit format/size limits and a separate alternative-text
 field. Prévia segura shows inert text plus local image thumbnails and errors.
 Saving/import states disable repeat submissions; failures preserve form text.
+
+### Phase 7B.1 period selection
+
+Goal home periods and note/review associations use one calendar selector with
+Ano/Mês/Semana/Dia, a year, named months and concrete days/weeks. Show inclusive
+date ranges, including both years for boundary weeks. Canonical identifiers stay
+internal. Notes can explicitly choose Sem período associado; reviews require an
+exact choice. Changing the year must leave a nonexistent week/day unselected.
+Changing a goal's home period retains its tracking policy; show an incompatibility
+message and require an explicit valid choice before saving. Scope dates remain
+independent. Content forms scroll at small desktop sizes with persistent actions.
