@@ -62,7 +62,7 @@ Escopo define janela contextual da tarefa; `due_date` opcional indica prazo espe
 Escopo identifica o período de referência da meta; progresso pode ser manual inicialmente, com métricas vinculadas em fase posterior.
 
 ### Evento
-O evento possui `starts_at`/`ends_at`, fuso e opção all-day; também pode ter origem e tags. Um evento criado na página de outubro NÃO significa que dura todo outubro: escolher data e hora concretas é obrigatório. Recorrência de eventos: futuro.
+O evento usa exatamente uma autoridade temporal em `timing`: `timed` exige `starts_at`/`ends_at` com offsets válidos no fuso IANA; `all_day` exige datas civis `start_date`/`end_date_exclusive` e fuso IANA, sem timestamps artificiais. Os intervalos são semiabertos. Também pode ter origem e tags. Um evento criado na página de outubro NÃO significa que dura todo outubro: escolher data e hora concretas é obrigatório. Recorrência de eventos: futuro.
 
 ### Nota e avaliação
 Podem ser associadas a uma página/período como contexto, sem gerar ocorrências. Suportar texto livre e indicadores opcionais na avaliação.

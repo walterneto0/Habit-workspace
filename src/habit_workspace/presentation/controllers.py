@@ -40,6 +40,7 @@ from habit_workspace.vault.scanner import reference_problem
 from habit_workspace.vault.watcher import VaultWatcher
 
 KIND_LABELS = {
+    "event": "Evento",
     "task": "Tarefa",
     "goal": "Objetivo",
     "note": "Nota",
@@ -109,6 +110,9 @@ class WorkspaceController(QObject):
         from habit_workspace.presentation.planning import PlanningActions
 
         self.planning = PlanningActions(self)
+        from habit_workspace.presentation.events import EventActions
+
+        self.events = EventActions(self)
         from habit_workspace.presentation.content import ContentActions
 
         self.content = ContentActions(self)
@@ -135,6 +139,10 @@ class WorkspaceController(QObject):
     @Property(QObject, constant=True)
     def captureActions(self):
         return self.actions
+
+    @Property(QObject, constant=True)
+    def eventActions(self):
+        return self.events
 
     @Property(QObject, constant=True)
     def planningActions(self):
@@ -271,6 +279,7 @@ class WorkspaceController(QObject):
         busy = bool(
             self.studio.draft
             or self._habit_form
+            or self.events.form
             or self.planning.form
             or self.content.form
             or self._pending
@@ -486,6 +495,7 @@ class WorkspaceController(QObject):
             self.actions.busy
             or not self.session
             or not self._habit_form
+            or self.events.form
             or self.planning.form
             or self._guard_studio()
         ):
@@ -589,6 +599,9 @@ class WorkspaceController(QObject):
         return True
 
     def _guard_studio(self):
+        if self.events.form:
+            self._notice_message("Salve ou cancele o evento antes de sair.", True)
+            return True
         if self.content.form:
             self._notice_message("Salve ou cancele a edição de conteúdo antes de sair.", True)
             return True
@@ -782,8 +795,14 @@ class WorkspaceController(QObject):
                 ).casefold()
             ]
         recent = self.settings.value("recentVaults", [], type=list)
+        agenda = self.events.rows()
         state = {
             "contentForm": self.content.form,
+            "agenda": agenda,
+            "agendaGroups": self.events.groups(agenda),
+            "agendaWindow": self.events.window(),
+            "eventResults": self.events.search_rows(),
+            "eventForm": self.events.form,
             "planning": self.planning.rows(),
             "planningForm": self.planning.form,
             "planningSaving": self.actions.busy,
@@ -831,6 +850,7 @@ class WorkspaceController(QObject):
         self.session = session
         self.media.reset()
         self.studio.media.reset()
+        self.events.form, self.events.loaded = {}, None
         self.planning.form, self.planning.loaded = {}, None
         self._selected, self._query = "", ""
         self._return_context = None

@@ -16,6 +16,7 @@ class DocumentError(ValueError):
 
 
 class DocumentKind(StrEnum):
+    EVENT = "event"
     TASK = "task"
     GOAL = "goal"
     NOTE = "note"
@@ -163,6 +164,10 @@ class Document:
         if "origin_page_id" in hw and hw["origin_page_id"] is not None:
             uuid_value(hw["origin_page_id"], "origin_page_id")
         self._validate_period(hw)
+        if self.kind == DocumentKind.EVENT:
+            from habit_workspace.domain.events import event_from_mapping
+
+            event_from_mapping(hw)
         if self.kind == DocumentKind.REVIEW:
             require(
                 isinstance(hw.get("title"), str) and bool(hw["title"].strip()),

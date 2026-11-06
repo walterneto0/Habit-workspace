@@ -504,3 +504,53 @@ GIF displays its first decoded frame. Validated pixels are cached with bounded
 memory by file revision, never canonicalized into SQLite/layouts as content.
 Import is asynchronous; cancellation or failed document/layout saving may leave
 an unreferenced asset. Assets are never silently deleted or overwritten.
+
+## Phase 7C Execution 1 — event schema v4
+
+`hw.kind: event` requires `schema_version: 4`, UUID `id`, nonempty `title`
+and a `timing` mapping. Optional `tags` are normalized on application writes;
+`origin_page_id` is UUID provenance only. Markdown body and unknown compatible
+metadata survive updates. Existing kinds are not migrated.
+
+Timed example:
+```yaml
+hw:
+  schema_version: 4
+  kind: event
+  id: "d9335796-61de-47b7-b164-8d9eb1962c84"
+  title: Study group
+  timing:
+    kind: timed
+    timezone: America/Recife
+    starts_at: "2026-11-04T19:00:00-03:00"
+    ends_at: "2026-11-04T20:30:00-03:00"
+```
+All-day replaces timing with:
+```yaml
+  timing:
+    kind: all_day
+    timezone: America/Recife
+    start_date: "2026-11-04"
+    end_date_exclusive: "2026-11-06"
+```
+Dates are ISO strings, exclusive end strictly follows start. Timed offsets must
+match the IANA zone at each instant; nonexistent wall times are rejected and
+explicit offsets disambiguate fall-back times. Ordering compares UTC instants.
+Mixed timing fields, naive timestamps, recurrence and invalid zones are rejected.
+Files default to `Items/Events/<UUID>.md`; paths are not identity.
+Agenda groups each intersection by the event's own civil timezone; midnight
+exclusive ends do not occupy the next day. All-day dates never shift with the
+machine timezone. Agenda is derived, never persisted as documents.
+
+Selective transfer coverage is deferred to Execution 2; this execution adds no
+transfer format, `.hwpack`, dependency copying or backup contract.
+
+### Event local-time entry (Execution 1 completion)
+The schema above is unchanged. Local date/time form input resolves against the
+selected IANA zone. A nonexistent local time is rejected, never shifted. A repeated
+local time requires the first/second occurrence; the selected offset is persisted
+in the single authoritative timestamp. UI choices and system timezone suggestions
+are never persisted as additional time authorities. Existing event zones are
+retained on open. All-day forms use inclusive last-day input and persist only the
+exclusive civil boundary. Changing a zone explicitly retains the entered wall
+hours; the form explains this before saving.

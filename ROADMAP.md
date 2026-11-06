@@ -100,3 +100,9 @@ Aceite: outro computador abre o pacote, reconstitui interface e métricas inclu�
 
 ## Fora do MVP
 Cloud, login, sync automático, criptografia própria de cofre, mobile, plataforma web, plugins arbitrários, colaboração e canvas de posicionamento livre.
+
+### Phase 7C Execution 1 checkpoint
+Event schema/service, timezone-aware forms, grouped agenda and contextual
+navigation are implemented. See docs/verification/phase-7c-execution-1.md for
+execution evidence and platform limits. This is the Execution 1 checkpoint;
+Phase 7C acceptance still requires selective transfer in Execution 2.

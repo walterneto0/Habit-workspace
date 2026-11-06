@@ -136,7 +136,7 @@ ApplicationWindow {
         onActivated: window.backend.clearSelection()
     }
 
-    onClosing: function(close) { if (modelState.contentForm && modelState.contentForm.open) { close.accepted = false; return; } if (modelState.planningForm && modelState.planningForm.open) { close.accepted = false; return; } if (backend.layoutStudio.state.active) { close.accepted = false; studioView.discard(); } }
+    onClosing: function(close) { if (modelState.eventForm && modelState.eventForm.open) { close.accepted = false; return; } if (modelState.contentForm && modelState.contentForm.open) { close.accepted = false; return; } if (modelState.planningForm && modelState.planningForm.open) { close.accepted = false; return; } if (backend.layoutStudio.state.active) { close.accepted = false; studioView.discard(); } }
 
     RowLayout {
         anchors.fill: parent
@@ -627,6 +627,7 @@ ApplicationWindow {
         modelState: window.modelState
     }
     ContentDialog { backend: window.backend; modelState: window.modelState }
+    EventDialog { backend: window.backend; modelState: window.modelState }
     PlanningDialog { backend: window.backend; modelState: window.modelState }
     HabitDialog {
         backend: window.backend

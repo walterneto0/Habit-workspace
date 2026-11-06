@@ -76,6 +76,13 @@ class _Job(QRunnable):
                         if loaded
                         else service.create(kind=values.get("kind", "note"), **args)
                     )
+            elif self.kind == "event_save":
+                from habit_workspace.application.events import EventService
+
+                service = EventService(session)
+                args = dict(self.arguments)
+                loaded = args.pop("loaded")
+                result = service.update(loaded, **args) if loaded else service.create(**args)
             elif self.kind in ("planning_save", "planning_complete"):
                 from habit_workspace.application.planning import PlanningService
 

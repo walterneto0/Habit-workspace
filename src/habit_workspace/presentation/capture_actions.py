@@ -184,6 +184,12 @@ class CaptureActions(QObject):
         if kind in ("image_import", "content_media"):
             w.content.media_completed(kind, result, error)
             return
+        if kind == "event_save":
+            w.events.completed(error)
+            w._publish()
+            if report is not None:
+                w.watcher.accept_report(report)
+            return
         if kind == "content_save":
             w.content.completed(error)
             if report is not None:

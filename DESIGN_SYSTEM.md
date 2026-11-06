@@ -162,3 +162,17 @@ exact choice. Changing the year must leave a nonexistent week/day unselected.
 Changing a goal's home period retains its tracking policy; show an incompatibility
 message and require an explicit valid choice before saving. Scope dates remain
 independent. Content forms scroll at small desktop sizes with persistent actions.
+
+### Phase 7C — events and agenda
+Event forms use Portuguese civil dates, named IANA zone search/selection and a
+clear selected-zone label. The local system zone is only a new-event suggestion;
+if unavailable, UTC is visibly suggested for correction. Existing events keep
+their saved zone. No raw offset entry is required. Repeated wall times reveal
+explicit first/second occurrence choices with UTC offsets for identification;
+nonexistent times produce a draft-preserving error.
+
+Keep actions visible while form contents scroll, including at 800×640. Agenda
+shows Portuguese weekday/date headings, all-day entries before timed entries,
+then task deadlines and scheduled habits. Show multi-day intervals and continuation
+labels, event zone and explicit habit states. Never label missing logs as failures.
+Each row opens its original UUID; habits also retain the projected civil date.

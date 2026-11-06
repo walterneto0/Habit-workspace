@@ -195,3 +195,8 @@ creates an immutable layout revision through the existing save workflow.
 Note blocks display only validated local Assets references. Missing/corrupt assets
 produce visible messages without changing content. Removing blocks does not
 delete images, notes or review documents.
+
+### Phase 7C agenda
+Agenda is a workspace projection independent of Layout Studio blocks. It creates
+no layout assignments or observed values; canonical UUIDs remain navigation
+targets. Event timing follows FILE_FORMAT.md.
