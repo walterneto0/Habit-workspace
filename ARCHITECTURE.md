@@ -233,3 +233,23 @@ Markdown media batches retain the 64-link limit. QML Images load asynchronously.
 Unchanged document refreshes revalidate displayed assets, so an image-only external
 edit does not depend on a Markdown fingerprint change. Full measurements and
 remaining rendering/queue limitations are in the 7B.1 verification report.
+
+### Phase 7C Execution 1 checkpoint
+EventService patches revision-bearing Documents via VaultSession. `event_save`
+uses the existing serialized VaultTasks worker. Domain timing is Qt-free.
+Agenda reads ScanReport in windows of at most 31 days; task due dates are
+independent of scopes and habit absence is unrecorded, never inferred missed.
+See FILE_FORMAT.md for event timing authorities and the verification report
+for final execution evidence and platform limits.
+
+`local_candidates` round-trips each fold through UTC; gaps have no candidates,
+and folds have two distinct instants. EventActions resolves ordinary local times
+automatically and requires an exact user-selected candidate for ambiguous times.
+System timezone discovery uses the existing Qt system API only in presentation;
+zone rules and validation remain in Python zoneinfo. Stored events retain their
+own zone. UI fold choices are transient, never extra canonical metadata.
+
+Agenda groups a bounded 31-day projection without rescanning. Each row retains
+source kind, UUID and projected date. Habit navigation selects its canonical
+document on that exact day; task/event actions retain existing edit workflows.
+Missing-habit snapshots are disclosed as incomplete dependencies, not schedules.
