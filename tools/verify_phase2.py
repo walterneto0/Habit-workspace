@@ -156,6 +156,8 @@ def verify(output: Path) -> dict:
         calendar_day.forceActiveFocus(Qt.FocusReason.TabFocusReason)
         settle()
         click(calendar_day)
+        assert controller.state["period"] == "month/2026-10"
+        click(named("calendar-open-day"))
         assert controller.state["period"] == "day/2026-10-29"
         click(named("nav-week"))
         assert controller.state["period"] == "week/2026-W44"
@@ -174,6 +176,7 @@ def verify(output: Path) -> dict:
         capture("calendar-compact-scrolled", 640, 480)
         QTest.keyClick(window, Qt.Key.Key_Space)
         settle()
+        click(named("calendar-open-day"))
         assert controller.state["period"] == "day/2026-11-08"
         window.setWidth(1000)
         window.setHeight(740)

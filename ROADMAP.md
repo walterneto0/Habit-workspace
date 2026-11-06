@@ -82,7 +82,7 @@ não aparecem automaticamente em meses, semanas ou dias. Consulte
 [direção 7B](docs/planning/phase-7b-direction.md) para requisitos e
 [verificação final](docs/verification/phase-7b-final.md) para evidências, contratos e limitações.
 
-### Fase 7C — Eventos, agenda e transferência seletiva (pendente)
+### Fase 7C — Eventos, agenda e transferência seletiva (parcial)
 Eventos e agenda derivada de itens canônicos; transferência selecionada com
 dependências sem antecipar o pacote/backup completo da Fase 9.
 
@@ -106,3 +106,13 @@ Event schema/service, timezone-aware forms, grouped agenda and contextual
 navigation are implemented. See docs/verification/phase-7c-execution-1.md for
 execution evidence and platform limits. This is the Execution 1 checkpoint;
 Phase 7C acceptance still requires selective transfer in Execution 2.
+
+
+### Checkpoint atual — calendário modular
+
+Refinamento de apresentação implementado: módulos recolhíveis/ampliáveis, prévia
+por dia e criação contextual no calendário; avisos visualmente separados.
+Ver [evidências](docs/verification/phase-7c-modular-calendar.md).
+Próximo passo: Execução 2 da 7C (transferência seletiva), começando pelo preflight
+somente leitura e testes de identidade/conflitos. Não iniciar a Fase 8 antes
+fechar os critérios restantes da 7C. Estados visuais são transitórios.

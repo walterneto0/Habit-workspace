@@ -48,7 +48,8 @@ def verify(reopen=None):
                 )
                 print(json.dumps({"result": "PASS", "reopen": True, "qmlWarnings": ui.errors}))
                 return
-            ui.click("new-task")
+            ui.click("calendar-new")
+            ui.click("calendar-new-task")
             ui.text("planning-title", "Prepare outline")
             ui.text("planning-body", "Keep **Markdown**")
             ui.text("planning-due", "2026-11-04")
@@ -75,7 +76,8 @@ def verify(reopen=None):
                     and controller.state["planning"][0]["status"] == "pending"
                 ),
             )
-            ui.click("new-goal")
+            ui.click("calendar-new")
+            ui.click("calendar-new-goal")
             ui.text("planning-title", "Annual goal")
             ui.text("planning-start", "2026-01-01")
             ui.text("planning-end", "2026-12-31")
@@ -94,9 +96,9 @@ def verify(reopen=None):
             wait(app, lambda: not controller.actions.busy, timeout=10)
             assert not controller.planning.form, controller.planning.form
             ui.dialog_closed("PlanningDialog")
-            ui.text("planning-search", "outline")
+            ui.text("document-search", "outline")
             assert len(controller.state["planning"]) == 1
-            ui.text("planning-search", "")
+            ui.text("document-search", "")
             # Conflict after the editor opens: preserve external content and the draft.
             ui.click("planning-edit-" + task)
             path = next(

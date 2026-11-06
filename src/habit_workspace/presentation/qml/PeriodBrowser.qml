@@ -7,10 +7,118 @@ ColumnLayout {
     id: browser
     required property var backend
     required property var modelState
+    property string selectedDate: modelState.anchor
+    property string preview: ""
+    property bool datePicked: false
+    property var selectedRows: []
+    property string previousPeriod: modelState.period
+    Connections {
+        target: browser.backend
+        function onChanged() {
+            if (browser.previousPeriod !== browser.modelState.period) {
+                browser.previousPeriod = browser.modelState.period;
+                browser.selectedDate = browser.modelState.anchor;
+                browser.datePicked = false;
+                browser.preview = "";
+                browser.selectedRows = [];
+            }
+            if (browser.datePicked) {
+                browser.preview = browser.backend.eventActions.dayPreview(browser.selectedDate);
+                browser.selectedRows = browser.backend.eventActions.dayRows(browser.selectedDate);
+            }
+        }
+    }
     spacing: 16
+    RowLayout {
+        Layout.fillWidth: true
+        UiText {
+            Layout.fillWidth: true
+            text: Qt.formatDate(new Date(browser.selectedDate + "T12:00:00"), "dd/MM/yyyy")
+            color: Theme.secondary
+        }
+        ActionButton {
+            id: createButton
+            objectName: "calendar-new"
+            text: browser.datePicked ? qsTr("Novo nesta data") : qsTr("Novo neste período")
+            glyph: "plus"
+            primary: true
+            enabled: browser.modelState.hasVault
+            onClicked: calendarCreate.open()
+            Menu {
+                id: calendarCreate
+                y: createButton.height
+                palette.window: Theme.surface
+                palette.text: Theme.text
+                palette.windowText: Theme.text
+                palette.highlight: Theme.accentSurface
+                palette.highlightedText: Theme.text
+                function prepare() {
+                    if (browser.datePicked)
+                        browser.backend.navigate("day", browser.selectedDate);
+                }
+                MenuItem {
+                    objectName: "calendar-new-task"
+                    text: qsTr("Tarefa")
+                    onTriggered: {
+                        calendarCreate.prepare();
+                        browser.backend.planningActions.create("task");
+                    }
+                }
+                MenuItem {
+                    objectName: "calendar-new-goal"
+                    text: qsTr("Objetivo")
+                    onTriggered: {
+                        calendarCreate.prepare();
+                        browser.backend.planningActions.create("goal");
+                    }
+                }
+                MenuItem {
+                    objectName: "calendar-new-event"
+                    text: qsTr("Evento")
+                    onTriggered: {
+                        calendarCreate.prepare();
+                        browser.backend.eventActions.create();
+                    }
+                }
+                MenuItem {
+                    text: qsTr("Hábito")
+                    onTriggered: {
+                        calendarCreate.prepare();
+                        browser.backend.newHabit();
+                    }
+                }
+                MenuItem {
+                    objectName: "calendar-new-note"
+                    text: qsTr("Nota")
+                    onTriggered: {
+                        calendarCreate.prepare();
+                        browser.backend.contentActions.create();
+                    }
+                }
+                MenuItem {
+                    text: qsTr("Avaliação")
+                    onTriggered: {
+                        calendarCreate.prepare();
+                        browser.backend.contentActions.createReview();
+                    }
+                }
+            }
+        }
+        ActionButton {
+            objectName: "calendar-open-day"
+            text: qsTr("Abrir dia")
+            onClicked: browser.backend.navigate("day", browser.selectedDate)
+        }
+    }
+    UiText {
+        Layout.fillWidth: true
+        visible: browser.preview.length > 0 && browser.selectedRows.length === 0
+        text: browser.preview
+        color: Theme.secondary
+    }
     GridLayout {
         Layout.fillWidth: true
-        visible: browser.modelState.children.length > 0
+        visible: browser.modelState.view === "year" && browser.modelState.children.length > 0
         columns: browser.width > 720 ? 3 : browser.width > 400 ? 2 : 1
         columnSpacing: 12
         rowSpacing: 12
@@ -55,15 +163,18 @@ ColumnLayout {
     }
     Surface {
         Layout.fillWidth: true
-        visible: browser.modelState.view === "month" || browser.modelState.view === "calendar"
-        padding: browser.width > 650 ? 24 : 12
+        visible: browser.modelState.calendar.length > 0
+        padding: browser.width > 650 ? 12 : 4
+        background: Rectangle {
+            color: "transparent"
+        }
         ColumnLayout {
             anchors.fill: parent
             spacing: 12
             RowLayout {
                 Layout.fillWidth: true
                 UiText {
-                    text: qsTr("Calendário")
+                    text: Qt.formatDate(new Date(browser.modelState.anchor + "T12:00:00"), "MMMM yyyy")
                     font.weight: Font.Medium
                     Layout.fillWidth: true
                 }
@@ -104,20 +215,46 @@ ColumnLayout {
                         implicitWidth: 32
                         horizontalPadding: 0
                         text: weekCell ? String(cell.week).padStart(2, "0") : String(cell.day)
-                        hint: weekCell ? qsTr("Abrir semana %1").arg(cell.week) : cell.label
+                        property string daySummary: ""
+                        hint: weekCell ? qsTr("Abrir semana %1").arg(cell.week) : cell.label + "\n" + daySummary
+                        onHoveredChanged: if (hovered && !weekCell)
+                            daySummary = browser.backend.eventActions.dayPreview(cell.date)
+                        onActiveFocusChanged: if (activeFocus && !weekCell)
+                            daySummary = browser.backend.eventActions.dayPreview(cell.date)
                         quiet: true
                         selected: !weekCell && cell.date === browser.modelState.today
                         opacity: weekCell || !cell.inMonth ? 0.7 : 1
-                        onClicked: browser.backend.navigate(weekCell ? "week" : "day", cell.date)
+                        onClicked: {
+                            if (weekCell)
+                                browser.backend.navigate("week", cell.date);
+                            else {
+                                browser.datePicked = true;
+                                browser.selectedDate = cell.date;
+                                browser.preview = browser.backend.eventActions.dayPreview(cell.date);
+                                browser.selectedRows = browser.backend.eventActions.dayRows(cell.date);
+                            }
+                        }
                     }
                 }
             }
             UiText {
                 Layout.fillWidth: true
-                text: qsTr("Selecione um dia ou o número de uma semana para abrir o período.")
+                text: qsTr("Passe o mouse ou selecione um dia para ver seus registros. Use Novo nesta data para adicionar.")
                 color: Theme.muted
                 font.pixelSize: 12
             }
+        }
+    }
+    Repeater {
+        model: browser.selectedRows
+        delegate: ActionButton {
+            required property var modelData
+            Layout.fillWidth: true
+            alignLeft: true
+            quiet: true
+            objectName: "agenda-open-" + modelData.source_id + "-" + modelData.display_day
+            text: modelData.title + " · " + modelData.time_label + " · " + modelData.status_label
+            onClicked: browser.backend.eventActions.openOccurrence(modelData.source_kind, modelData.source_id, modelData.display_day)
         }
     }
 }

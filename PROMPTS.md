@@ -42,10 +42,14 @@ Implement ROADMAP Phase 5 ONLY. Build a beautiful Linear-inspired Layout Studio 
 Implement ROADMAP Phase 6 ONLY. Bind checklist blocks to canonical Habit IDs or create typed field definitions, persist check-ins and observations in day-page documents, use stable IDs, tags and recurrences, keep historical data when blocks are removed. Test no duplication, invalid fields and missing sources. Stop.
 ```
 
-## P8 — Fase 7: Agenda, rich notes, assets
-```text
-Implement ROADMAP Phase 7 ONLY. Tasks/goals/events/reviews, Markdown note blocks with stable markers, local image Assets with safe references, calendar derived from canonical records. Test import/transfer, unknown block preservation, and file moves. Stop.
-```
+## P8 — Fase 7: execução atual
+
+Eventos e agenda (7C Execução 1) estão implementados. O próximo escopo é
+[7C Execução 2 — transferência seletiva](docs/planning/phase-7c-execution-2-codex.md),
+seguindo a [direção canônica](docs/planning/phase-7c-direction.md).
+Consulte primeiro o [checkpoint verificado](docs/verification/phase-7c-execution-1.md).
+Prompts de execuções anteriores ficam em `docs/planning/archive/` como histórico;
+não são instruções para reimplementar funcionalidades existentes.
 
 ## P9 — Fase 8: Gráficos e rollups
 ```text

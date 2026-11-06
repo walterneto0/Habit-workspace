@@ -9,6 +9,7 @@ ApplicationWindow {
     readonly property var modelState: backend.state
     readonly property bool narrow: width < 1000
     readonly property bool sidebarCollapsed: narrow || modelState.sidebarCollapsed
+    property string focusedModule: ""
     property bool showProperties: true
     property string previousView: ""
     width: 1200
@@ -35,6 +36,7 @@ ApplicationWindow {
             }
             if (window.previousView !== window.modelState.view + window.modelState.period) {
                 window.previousView = window.modelState.view + window.modelState.period;
+                window.focusedModule = "";
                 const flickable = workspaceScroll.contentItem as Flickable;
                 if (flickable)
                     flickable.contentY = 0;
@@ -136,7 +138,24 @@ ApplicationWindow {
         onActivated: window.backend.clearSelection()
     }
 
-    onClosing: function(close) { if (modelState.eventForm && modelState.eventForm.open) { close.accepted = false; return; } if (modelState.contentForm && modelState.contentForm.open) { close.accepted = false; return; } if (modelState.planningForm && modelState.planningForm.open) { close.accepted = false; return; } if (backend.layoutStudio.state.active) { close.accepted = false; studioView.discard(); } }
+    onClosing: function (close) {
+        if (modelState.eventForm && modelState.eventForm.open) {
+            close.accepted = false;
+            return;
+        }
+        if (modelState.contentForm && modelState.contentForm.open) {
+            close.accepted = false;
+            return;
+        }
+        if (modelState.planningForm && modelState.planningForm.open) {
+            close.accepted = false;
+            return;
+        }
+        if (backend.layoutStudio.state.active) {
+            close.accepted = false;
+            studioView.discard();
+        }
+    }
 
     RowLayout {
         anchors.fill: parent
@@ -146,6 +165,7 @@ ApplicationWindow {
             modelState: window.modelState
             collapsed: window.sidebarCollapsed
             Layout.fillHeight: true
+            Layout.minimumWidth: window.sidebarCollapsed ? 64 : 224
             Layout.preferredWidth: window.sidebarCollapsed ? 64 : 224
             Behavior on Layout.preferredWidth {
                 NumberAnimation {
@@ -291,10 +311,18 @@ ApplicationWindow {
                                     onAccepted: window.backend.navigate(window.modelState.view, text)
                                 }
                             }
-                            Surface {
+                            Pane {
                                 Layout.fillWidth: true
                                 visible: !!window.modelState.notice
-                                padding: 12
+                                padding: 8
+                                background: Rectangle {
+                                    color: "transparent"
+                                    Rectangle {
+                                        width: 3
+                                        height: parent.height
+                                        color: window.modelState.noticeError ? Theme.error : Theme.success
+                                    }
+                                }
                                 RowLayout {
                                     anchors.fill: parent
                                     spacing: 12
@@ -435,84 +463,139 @@ ApplicationWindow {
                                     }
                                 }
                             }
-                            PlanningPanel {
+                            WorkspaceModule {
                                 Layout.fillWidth: true
-                                visible: window.modelState.hasVault && (!!window.modelState.period || window.modelState.view === "planning" || window.modelState.view === "overview")
-                                backend: window.backend
-                                modelState: window.modelState
+                                title: qsTr("Calendário")
+                                moduleKey: "calendar"
+                                visible: (!!window.modelState.period) && (!window.focusedModule || window.focusedModule === "calendar")
+                                expanded: window.focusedModule === "calendar"
+                                onMaximizeRequested: window.focusedModule = expanded ? "" : "calendar"
+                                PeriodBrowser {
+                                    Layout.fillWidth: true
+                                    backend: window.backend
+                                    modelState: window.modelState
+                                    visible: !!window.modelState.period
+                                }
+                            }
+                            WorkspaceModule {
+                                Layout.fillWidth: true
+                                title: qsTr("Tarefas e objetivos")
+                                moduleKey: "planning"
+                                visible: window.modelState.hasVault && (!!window.modelState.period || window.modelState.view === "planning") && (!window.focusedModule || window.focusedModule === "planning")
+                                expanded: window.focusedModule === "planning"
+                                onMaximizeRequested: window.focusedModule = expanded ? "" : "planning"
+                                PlanningPanel {
+                                    Layout.fillWidth: true
+                                    visible: window.modelState.hasVault && (!!window.modelState.period || window.modelState.view === "planning")
+                                    backend: window.backend
+                                    modelState: window.modelState
+                                }
                             }
                             ColumnLayout {
                                 Layout.fillWidth: true
                                 visible: window.modelState.hasVault && !!window.modelState.period
                                 spacing: 12
-                                TrackingPanel {
+                                WorkspaceModule {
                                     Layout.fillWidth: true
-                                    backend: window.backend
-                                    modelState: window.modelState
-                                }
-                                RowLayout {
-                                    Layout.fillWidth: true
-                                    UiText { Layout.fillWidth: true; text: qsTr("Layout ativo desde: ") + (window.modelState.composition.activation || ""); color: Theme.secondary }
-                                    ActionButton {
-                                        text: qsTr("Personalizar página")
-                                        objectName: "open-layout-studio"
-                                        onClicked: window.backend.layoutStudio.open()
+                                    title: qsTr("Hábitos e registros")
+                                    moduleKey: "tracking"
+                                    visible: (window.modelState.hasVault && !!window.modelState.period) && (!window.focusedModule || window.focusedModule === "tracking")
+                                    expanded: window.focusedModule === "tracking"
+                                    onMaximizeRequested: window.focusedModule = expanded ? "" : "tracking"
+                                    TrackingPanel {
+                                        Layout.fillWidth: true
+                                        backend: window.backend
+                                        modelState: window.modelState
                                     }
                                 }
-                                UiText { objectName: "layout-notice"; Layout.fillWidth: true; text: window.modelState.composition.layoutNotice || ""; color: Theme.secondary; visible: text.length > 0 }
-                                UiText { Layout.fillWidth: true; text: (window.modelState.composition.issues || []).concat(window.modelState.composition.captureError ? [window.modelState.composition.captureError] : []).join("\n"); color: Theme.warning; visible: text.length > 0 }
-                                LayoutComposition {
-                                    objectName: "tracking-composition"
+                                WorkspaceModule {
                                     Layout.fillWidth: true
-                                    tracking: true
-                                    planningBusy: !!window.modelState.planningSaving
-                                    onEditContent: (identifier, linked) => window.backend.contentActions.region(identifier, linked)
-                                    onPlanningEdit: (identifier) => window.backend.planningActions.edit(identifier)
-                                    onPlanningComplete: (identifier, completed, token) => window.backend.planningActions.complete(identifier, completed, token)
-                                    feedback: (window.modelState.tracking || {}).feedback || ({})
-                                    blocks: window.modelState.composition.blocks || []
-                                    gridColumns: window.modelState.composition.columns || 1
-                                    onDetails: (identifier) => window.backend.showHabit(identifier)
-                                    onCheckin: (habitId, state, token) => window.backend.captureActions.setCheckin(habitId, state, token)
-                                    onObserve: (fieldId, blockId, text, token) => window.backend.captureActions.saveObservation(fieldId, blockId, text, token)
-                                    onObserveBoolean: (fieldId, blockId, value, token) => window.backend.captureActions.setBooleanObservation(fieldId, blockId, value, token)
-                                    onClearValue: (fieldId, token) => window.backend.captureActions.clearObservation(fieldId, token)
+                                    title: qsTr("Página personalizada")
+                                    moduleKey: "composition"
+                                    visible: (window.modelState.hasVault && !!window.modelState.period) && (!window.focusedModule || window.focusedModule === "composition")
+                                    expanded: window.focusedModule === "composition"
+                                    onMaximizeRequested: window.focusedModule = expanded ? "" : "composition"
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        UiText {
+                                            Layout.fillWidth: true
+                                            text: qsTr("Sua página")
+                                            color: Theme.secondary
+                                        }
+                                        ActionButton {
+                                            text: qsTr("Personalizar página")
+                                            objectName: "open-layout-studio"
+                                            onClicked: window.backend.layoutStudio.open()
+                                        }
+                                    }
+                                    UiText {
+                                        objectName: "layout-notice"
+                                        Layout.fillWidth: true
+                                        text: window.modelState.composition.layoutNotice || ""
+                                        color: Theme.secondary
+                                        visible: text.length > 0
+                                    }
+                                    UiText {
+                                        Layout.fillWidth: true
+                                        text: (window.modelState.composition.issues || []).concat(window.modelState.composition.captureError ? [window.modelState.composition.captureError] : []).join("\n")
+                                        color: Theme.warning
+                                        visible: text.length > 0
+                                    }
+                                    LayoutComposition {
+                                        objectName: "tracking-composition"
+                                        Layout.fillWidth: true
+                                        tracking: true
+                                        planningBusy: !!window.modelState.planningSaving
+                                        onEditContent: (identifier, linked) => window.backend.contentActions.region(identifier, linked)
+                                        onPlanningEdit: identifier => window.backend.planningActions.edit(identifier)
+                                        onPlanningComplete: (identifier, completed, token) => window.backend.planningActions.complete(identifier, completed, token)
+                                        feedback: (window.modelState.tracking || {}).feedback || ({})
+                                        blocks: window.modelState.composition.blocks || []
+                                        gridColumns: window.modelState.composition.columns || 1
+                                        onDetails: identifier => window.backend.showHabit(identifier)
+                                        onCheckin: (habitId, state, token) => window.backend.captureActions.setCheckin(habitId, state, token)
+                                        onObserve: (fieldId, blockId, text, token) => window.backend.captureActions.saveObservation(fieldId, blockId, text, token)
+                                        onObserveBoolean: (fieldId, blockId, value, token) => window.backend.captureActions.setBooleanObservation(fieldId, blockId, value, token)
+                                        onClearValue: (fieldId, token) => window.backend.captureActions.clearObservation(fieldId, token)
+                                    }
                                 }
                             }
-                            PeriodBrowser {
+                            WorkspaceModule {
                                 Layout.fillWidth: true
-                                backend: window.backend
-                                modelState: window.modelState
-                                visible: !!window.modelState.period
-                            }
-                            Input {
-                                id: search
-                                objectName: "document-search"
-                                Layout.fillWidth: true
-                                visible: window.modelState.hasVault && window.modelState.view !== "settings" && window.modelState.view !== "statistics"
-                                placeholderText: qsTr("Buscar título, tag ou ID nesta página…  Ctrl+K")
-                                text: window.modelState.query
-                                onTextEdited: window.backend.setQuery(text)
-                            }
-                            ActionButton {
-                                text: qsTr("Nova nota")
-                                objectName: "new-note"
-                                visible: window.modelState.hasVault
-                                onClicked: window.backend.contentActions.create()
-                            }
-                            ActionButton {
-                                text: qsTr("Nova avaliação do período")
-                                objectName: "new-review"
-                                visible: window.modelState.hasVault
-                                onClicked: window.backend.contentActions.createReview()
-                            }
-                            DocumentList {
-                                Layout.fillWidth: true
-                                visible: window.modelState.hasVault && window.modelState.view !== "settings" && window.modelState.view !== "statistics"
-                                backend: window.backend
-                                modelState: window.modelState
-                                onImportRequested: window.openImport()
-                                onPropertiesRequested: window.properties()
+                                title: qsTr("Documentos")
+                                moduleKey: "documents"
+                                visible: (window.modelState.hasVault && window.modelState.view !== "settings" && window.modelState.view !== "statistics") && (!window.focusedModule || window.focusedModule === "documents")
+                                expanded: window.focusedModule === "documents"
+                                onMaximizeRequested: window.focusedModule = expanded ? "" : "documents"
+                                Input {
+                                    id: search
+                                    objectName: "document-search"
+                                    Layout.fillWidth: true
+                                    visible: window.modelState.hasVault && window.modelState.view !== "planning" && window.modelState.view !== "settings" && window.modelState.view !== "statistics"
+                                    placeholderText: qsTr("Buscar título, tag ou ID nesta página…  Ctrl+K")
+                                    text: window.modelState.query
+                                    onTextEdited: window.backend.setQuery(text)
+                                }
+                                ActionButton {
+                                    text: qsTr("Nova nota")
+                                    objectName: "new-note"
+                                    visible: window.modelState.hasVault && window.modelState.view === "notes"
+                                    onClicked: window.backend.contentActions.create()
+                                }
+                                ActionButton {
+                                    text: qsTr("Nova avaliação do período")
+                                    objectName: "new-review"
+                                    visible: window.modelState.hasVault && window.modelState.view === "notes"
+                                    onClicked: window.backend.contentActions.createReview()
+                                }
+                                DocumentList {
+                                    Layout.fillWidth: true
+                                    visible: window.modelState.hasVault && window.modelState.view !== "settings" && window.modelState.view !== "statistics"
+                                    backend: window.backend
+                                    modelState: window.modelState
+                                    onImportRequested: window.openImport()
+                                    onPropertiesRequested: window.properties()
+                                }
                             }
                             EmptyState {
                                 Layout.fillWidth: true
@@ -626,9 +709,18 @@ ApplicationWindow {
         backend: window.backend
         modelState: window.modelState
     }
-    ContentDialog { backend: window.backend; modelState: window.modelState }
-    EventDialog { backend: window.backend; modelState: window.modelState }
-    PlanningDialog { backend: window.backend; modelState: window.modelState }
+    ContentDialog {
+        backend: window.backend
+        modelState: window.modelState
+    }
+    EventDialog {
+        backend: window.backend
+        modelState: window.modelState
+    }
+    PlanningDialog {
+        backend: window.backend
+        modelState: window.modelState
+    }
     HabitDialog {
         backend: window.backend
         modelState: window.modelState

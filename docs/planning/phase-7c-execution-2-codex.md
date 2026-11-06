@@ -2,7 +2,7 @@
 
 **MODE: EXECUTION. Implement, test and report; do not stop at a plan.**
 
-Continue branch `feat/phase-7c-events-agenda-transfer` **after** reviewing the verified Execution 1 report. Read `AGENTS.md`, `docs/planning/phase-7c-direction.md`, `docs/verification/phase-7c-execution-1.md` and the relevant canonical architecture/file-format docs. Preserve all existing uncommitted changes. Do not repeat event/agenda implementations that already passed their acceptance tests.
+Continue the owner-approved working branch (currently `feat/modular-calendar-transfer`) **after** reviewing the verified Execution 1 report. Read `AGENTS.md`, `docs/planning/phase-7c-direction.md`, `docs/verification/phase-7c-execution-1.md` and the relevant canonical architecture/file-format docs. Preserve all existing uncommitted changes. Do not repeat event/agenda implementations that already passed their acceptance tests.
 
 ## Scope: selected local inter-vault transfer, safe integration, phase verification
 

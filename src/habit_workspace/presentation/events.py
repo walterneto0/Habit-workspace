@@ -1,6 +1,6 @@
 """Draft-preserving event forms and paged agenda navigation."""
 
-from datetime import datetime, time, timedelta
+from datetime import date, datetime, time, timedelta
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError, available_timezones
 
 from PySide6.QtCore import QObject, QTimeZone, Slot
@@ -44,6 +44,46 @@ class EventActions(QObject):
 
     def groups(self, rows):
         return agenda_groups(rows)
+
+    @Slot(str, result="QVariantList")
+    def dayRows(self, value):
+        w = self.workspace
+        if not w.session:
+            return []
+        try:
+            period = PeriodRef.containing("day", date.fromisoformat(value))
+        except ValueError:
+            return []
+        return agenda_rows(w.session.report, period, w.today, window_days=1)
+
+    @Slot(str, result=str)
+    def dayPreview(self, value):
+        """Read a single civil day without navigating or writing canonical data."""
+        w = self.workspace
+        if not w.session:
+            return "Abra um cofre para ver os registros."
+        try:
+            period = PeriodRef.containing("day", date.fromisoformat(value))
+        except ValueError:
+            return "Data inválida."
+        rows = agenda_rows(w.session.report, period, w.today, window_days=1)
+        labels = [
+            " · ".join(filter(None, (r["title"], r.get("time_label"), r.get("status_label"))))
+            for r in rows
+        ]
+        for loaded in w.session.report.documents:
+            doc = loaded.document
+            hw = doc.metadata["hw"]
+            if doc.kind in ("note", "review", "goal") and (
+                hw.get("period") == str(period) or hw.get("home_period_ref") == str(period)
+            ):
+                labels.append(doc.title)
+        return (
+            "\n".join(labels[:12])
+            + (f"\nMais {len(labels) - 12} registros…" if len(labels) > 12 else "")
+            if labels
+            else "Nada marcado para esta data."
+        )
 
     @Slot(str, result="QVariantList")
     def zoneOptions(self, query):

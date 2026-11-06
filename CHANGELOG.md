@@ -5,6 +5,13 @@ artifacts.
 
 ## Unreleased
 
+- Added modular temporal pages, calendar day previews and contextual creation,
+  lighter dark surfaces, collapsible/focusable modules and compact notices.
+- Added the repository-local `./habit-workspace` launcher.
+- Consolidated phase prompts under docs/planning and archived obsolete prompts.
+- Phase 7C selective transfer remains incomplete; no new persistence schema.
+
+
 - Completed roadmap phases 0–4: local desktop shell, file-first vault,
   temporal/habit domain contracts, and versioned layout/metric contracts.
 - Added canonical metric definitions and dated observations, temporal layout

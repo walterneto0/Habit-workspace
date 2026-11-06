@@ -49,6 +49,7 @@ def verify(root, reopen=False):
         assert identifier in ui.named("event-zone-selected").property("text")
 
     def row_click(row):
+        ui.click("calendar-day-" + row["display_day"])
         ui.click("agenda-open-" + row["source_id"] + "-" + row["display_day"])
 
     try:
@@ -60,7 +61,8 @@ def verify(root, reopen=False):
             ui.window.setWidth(800)
             ui.window.setHeight(640)
             ui.settle()
-            ui.click("new-event")
+            ui.click("calendar-new")
+            ui.click("calendar-new-event")
             ui.text("event-titleInput", "Overnight meeting")
             ui.text("event-start", "31/12/2026")
             ui.text("event-end", "01/01/2027")
@@ -88,7 +90,8 @@ def verify(root, reopen=False):
             ui.focus(ui.named("event-save"))
             QTest.keyClick(ui.window, Qt.Key_Space)
             saved()
-            ui.click("new-event")
+            ui.click("calendar-new")
+            ui.click("calendar-new-event")
             ui.text("event-titleInput", "Conference")
             ui.click("event-all-day")
             ui.text("event-start", "31/12/2026")
@@ -97,7 +100,8 @@ def verify(root, reopen=False):
             ui.click("event-save")
             saved()
             # DST gap keeps text and creates no file; fold choices are accessible.
-            ui.click("new-event")
+            ui.click("calendar-new")
+            ui.click("calendar-new-event")
             ui.text("event-titleInput", "Invalid DST draft")
             ui.text("event-start", "08/03/2026")
             ui.text("event-end", "08/03/2026")
@@ -117,6 +121,8 @@ def verify(root, reopen=False):
             ui.settle()
             assert ui.named("event-start-choice").property("currentIndex") == 1
             ui.click("event-cancel")
+        w.navigate("week", "2027-01-01")
+        ui.settle()
         rows = w.state["agenda"]
         timed = [r for r in rows if r["title"] == "Overnight meeting"]
         all_day = [r for r in rows if r["title"] == "Conference"]
@@ -125,10 +131,14 @@ def verify(root, reopen=False):
         assert "Continuação" in timed[1]["time_label"]
         assert timed[1]["end_time"] == "02:00"
         assert all(r["all_day"] for r in all_day)
-        assert (
-            ui.named("agenda-day-2027-01-01").property("text")
-            == "Sexta-feira, 1 de janeiro de 2027"
-        )
+        ui.click("calendar-day-2027-01-01")
+        assert "Conference" in w.events.dayPreview("2027-01-01")
+        ui.focus(ui.named("calendar-day-2027-01-01"))
+        assert "Conference" in ui.named("calendar-day-2027-01-01").property("hint")
+        ui.click("calendar-collapse")
+        ui.click("calendar-collapse")
+        ui.click("calendar-expand")
+        ui.click("calendar-expand")
         # Full window for workspace navigation and day-group rendering.
         ui.window.setWidth(1200)
         ui.window.setHeight(900)
@@ -158,6 +168,11 @@ def verify(root, reopen=False):
         w.navigate("month", "2027-01-01")
         ui.settle()
         assert len([r for r in w.state["agenda"] if r["source_kind"] == "task"]) == 1
+        ui.click("calendar-day-2027-01-12")
+        ui.click("calendar-new")
+        ui.click("calendar-new-note")
+        assert w.content.form["period"] == "day/2027-01-12"
+        w.content.cancel()
         return dict(
             platform=app.platformName(),
             restart=reopen,

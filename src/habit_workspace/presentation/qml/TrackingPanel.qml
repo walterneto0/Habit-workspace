@@ -21,10 +21,10 @@ ColumnLayout {
                 Layout.fillWidth: true
                 spacing: 8
                 Glyph { name: "day"; ink: Theme.accent }
-                UiText { text: qsTr("Modo de acompanhamento"); font.weight: Font.Medium }
+                UiText { text: qsTr("Hábitos e registros"); font.weight: Font.Medium }
                 UiText {
                     Layout.fillWidth: true
-                    text: qsTr("· valores reais do dia, sem abrir o Layout Studio")
+                    text: qsTr("· um dia de cada vez")
                     color: Theme.muted
                     font.pixelSize: 12
                     elide: Text.ElideRight

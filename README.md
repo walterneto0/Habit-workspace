@@ -7,10 +7,24 @@ the durable source of truth.
 
 > **Status: pre-alpha.** Phases 0–4, the main Layout Studio workflow,
 > Phase 6/6.5, Phase 7A tasks/goals and Phase 7B content/reflection are
-> implemented and tested. Events/calendar, charts and backup/export remain pending. Use disposable data and keep independent backups.
+> implemented and tested, along with Phase 7C Execution 1 events/agenda.
+> Selective transfer, charts and backup/export remain pending. Use disposable data and keep independent backups.
 
 The initial application interface language is Brazilian Portuguese. Repository
-documentation is in English.
+documentation uses English and Brazilian Portuguese.
+
+## Current checkpoint
+
+Phase 7C Execution 1 plus modular calendar refinement are implemented. Temporal
+pages provide collapsible/focusable modules, calendar hover/focus previews,
+explicit day selection and contextual creation. Notices are compact status banners.
+Run `./habit-workspace` after the setup below; it uses the project's `.venv`.
+Module display state is transient and does not change canonical layout JSON.
+See [verification](docs/verification/phase-7c-modular-calendar.md).
+
+Next: Phase 7C Execution 2, selected local inter-vault transfer with dependency
+preview, explicit selection and create-only copies. It remains incomplete;
+Phase 8 charts and Phase 9 packages/backup are later work.
 
 ## What exists today
 
@@ -32,11 +46,13 @@ documentation is in English.
   manual overall progress; full-length notes and validated page-local regions.
 - Exact-period Markdown reviews with optional manual rating, safe local raster
   import into Assets/, alternative text, and offline images in notes/layouts.
+- Canonical timed/all-day events with IANA timezones and grouped agenda for
+  events, task deadlines and habit occurrences (Phase 7C Execution 1).
 - Tests and verification scripts for persistence, temporal behavior, layout
   contracts, and offscreen Qt/QML startup.
 
 See the [roadmap](ROADMAP.md), [Phase 7A CI report](docs/verification/phase-7a.md)
-and [Phase 7B final verification](docs/verification/phase-7b-final.md) for phase details.
+and [Phase 7B final verification](docs/verification/phase-7b-final.md) and [Phase 7C checkpoint](docs/verification/phase-7c-execution-1.md) for phase details.
 
 Concrete period pages now offer **Abrir Layout Studio**: add/select/reorder/resize
 blocks, preview, undo/redo and save a new immutable revision for that period.
@@ -53,7 +69,7 @@ written to the canonical day file. See [Phase 6 verification](docs/verification/
 
 - Complete Phase 5 acceptance: comprehensive component properties, specialized
   input shapes, validated pointer drag/drop and native visual review.
-- Events and calendar (Phase 7C).
+- Selective transfer between local vaults (Phase 7C Execution 2).
 - Chart rendering and broader analytics/rollups.
 - Self-contained dependency export, integrated backup, and recovery UX.
 - Native desktop accessibility/platform validation or mobile support.
@@ -98,7 +114,7 @@ From the repository root:
 python3.14 -m venv .venv
 .venv/bin/python -m pip install -r requirements.lock
 .venv/bin/python -m pip install --no-deps --no-build-isolation -e '.[dev]'
-.venv/bin/python -m habit_workspace
+./habit-workspace
 ```
 
 The lock file pins the tested dependency versions; it is not hash-verified or a
@@ -151,7 +167,7 @@ Never commit vault data, credentials, generated files, or dependency artifacts.
 | 6 — Habit and structured capture | Implemented; awaiting owner review |
 | 7A — Tasks and goals | Implemented; CI verified |
 | 7B — Notes, reviews, images and tracking policy | Implemented; ready for review |
-| 7C — Events, agenda and selected transfer | Pending |
+| 7C — Events, agenda and selected transfer | Events/agenda implemented; selective transfer pending |
 | 8 — Charts and cross-period rollups | Pending |
 | 9 — Packages, backup, stabilization, and distribution | Pending |
 

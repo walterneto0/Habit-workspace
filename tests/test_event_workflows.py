@@ -317,3 +317,16 @@ def test_explicit_missed_and_conflicting_checkins_are_not_inferred(workspace):
     rows = agenda_rows(w.session.report, PeriodRef("day/2026-11-03"), date(2026, 11, 3))
     assert len(rows) == 1 and rows[0]["conflict"]
     assert rows[0]["status"] == "conflict"
+
+
+def test_calendar_preview_is_read_only_and_handles_invalid_dates(workspace):
+    w = workspace
+    w.navigate("month", "2026-11-03")
+    before = {d.path: d.path.read_bytes() for d in w.session.report.documents}
+    period = w.state["period"]
+    assert w.events.dayRows("invalid") == []
+    assert w.events.dayPreview("invalid") == "Data inválida."
+    assert w.events.dayPreview("2026-11-03") == "Nada marcado para esta data."
+    assert w.events.dayRows("2026-11-03") == []
+    assert w.state["period"] == period
+    assert {d.path: d.path.read_bytes() for d in w.session.report.documents} == before

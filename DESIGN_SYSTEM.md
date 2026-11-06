@@ -5,14 +5,14 @@ Minimalismo denso e sofisticado, inspirado nos **princípios** da interface do L
 
 ## Tokens iniciais (a revisar com testes de contraste)
 ### Dark (padrão)
-- canvas `#101116`
-- sidebar `#14161C`
-- elevatedSurface `#1A1D25`
-- hoverSurface `#242832`
-- hairline `#30343D`
+- canvas `#22252D`
+- sidebar `#282C35`
+- elevatedSurface `#303540`
+- hoverSurface `#3A414E`
+- hairline `#474F5E`
 - textPrimary `#F2F3F5`
-- textSecondary `#A7ADB8`
-- textMuted `#808895`
+- textSecondary `#C0C6D1`
+- textMuted `#ADB6C5`
 - accent `#8C93F8`
 - success `#58B48D`
 - warning `#E1AD69`
@@ -176,3 +176,29 @@ shows Portuguese weekday/date headings, all-day entries before timed entries,
 then task deadlines and scheduled habits. Show multi-day intervals and continuation
 labels, event zone and explicit habit states. Never label missing logs as failures.
 Each row opens its original UUID; habits also retain the projected civil date.
+
+### Refinamento visual do checkpoint 7C
+
+O tema escuro usa cinzas mais claros e superfícies separadas por luminosidade.
+No planejamento, **Novo** reúne tarefa, objetivo, evento, nota e avaliação;
+**Ver tudo** abre a visão geral e um checkbox controla itens concluídos.
+A paginação da agenda aparece somente quando há outra janela disponível.
+A busca de planejamento aparece na visão dedicada, evitando duas buscas para
+um único filtro nas páginas temporais. Notas e avaliações também continuam
+acessíveis na página Documentos e notas. Formatos e persistência não mudam.
+
+### Módulos e calendário interativo — refinamento 7C
+
+Páginas temporais usam módulos com cabeçalho próprio: Calendário, Tarefas e
+objetivos, Hábitos e registros, Página personalizada e Documentos. Recolher
+oculta apenas o conteúdo; Ampliar concentra a área nos controles do módulo,
+e Restaurar retorna aos demais. São estados de apresentação da sessão, sem
+apagar valores nem alterar layouts canônicos. Avisos usam faixa compacta com
+indicador de status, sem o fundo/borda dos módulos.
+
+O calendário concentra a consulta diária: hover/foco descreve os registros;
+selecionar mantém o período aberto e apresenta entradas acionáveis. Abrir dia
+navega explicitamente. Novo neste período usa o contexto atual; depois de
+selecionar uma data, Novo nesta data abre a criação no contexto diário.
+Disponíveis: tarefa, objetivo, evento, hábito, nota e avaliação. Consultas são
+locais, sobre o relatório existente, sem gravar ou varrer novamente o cofre.

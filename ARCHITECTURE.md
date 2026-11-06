@@ -253,3 +253,11 @@ Agenda groups a bounded 31-day projection without rescanning. Each row retains
 source kind, UUID and projected date. Habit navigation selects its canonical
 document on that exact day; task/event actions retain existing edit workflows.
 Missing-habit snapshots are disclosed as incomplete dependencies, not schedules.
+
+### Modular calendar refinement
+
+WorkspaceModule provides transient collapse/focus state in QML. PeriodBrowser
+uses EventActions.dayPreview/dayRows for one civil day from the existing ScanReport;
+hover never navigates or writes. Selecting a day exposes canonical item actions;
+creation reuses existing forms with the selected day as context. Notices are
+separate inline banners. The generic layout JSON contract is unchanged.
