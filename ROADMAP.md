@@ -116,3 +116,15 @@ Ver [evidências](docs/verification/phase-7c-modular-calendar.md).
 Próximo passo: Execução 2 da 7C (transferência seletiva), começando pelo preflight
 somente leitura e testes de identidade/conflitos. Não iniciar a Fase 8 antes
 fechar os critérios restantes da 7C. Estados visuais são transitórios.
+
+
+Execução 2 iniciada pelo planejador somente leitura de dependências Markdown
+(`application/transfer_plan.py`), com testes de ciclos, seleção, limite e conflitos.
+Transferência efetiva, preflight completo e UI ainda não implementados. A Fase 7C
+permanece parcial. Este incremento não altera a cobertura dos relatórios anteriores.
+
+Validação do início da Execução 2: suíte completa offscreen **389 testes aprovados
+em 126,76 s**, Ruff check/format, diff check e launcher smoke aprovados.
+Testes do planejador foram escritos antes da implementação (falha inicial por
+módulo ausente, seguida de três testes aprovados). Validação nativa/plataformas
+adicionais não foi executada neste incremento.

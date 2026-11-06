@@ -554,3 +554,19 @@ are never persisted as additional time authorities. Existing event zones are
 retained on open. All-day forms use inclusive last-day input and persist only the
 exclusive civil boundary. Changing a zone explicitly retains the entered wall
 hours; the form explains this before saving.
+
+
+## Transferência seletiva — início da Execução 2 (incompleto)
+
+O planejador inicial opera somente em memória sobre dois ScanReports e UUIDs
+selecionados. Descobre referências Markdown transitivas de Document.references(),
+sem selecionar automaticamente dependências. Classifica candidatos como novos,
+idênticos, conflitantes, ausentes, ambíguos ou não suportados. Ciclos são deduplicados;
+o limite é 256 candidatos. Revisões de layout são divulgadas como não suportadas
+neste passo. Nenhum arquivo de plano ou novo schema é persistido.
+
+Ainda não é um preflight autorizado para cópia: faltam validação de identidade dos
+cofres, caminhos/bytes atuais, locks, limites agregados, assets, referências de
+layouts, seleção/confirmacão na UI e publicação create-only. Metadados desconhecidos
+e links no corpo não são cobertos por esse primeiro grafo. Nunca apresentar um
+resultado desse planejador como reconstrução completa ou autorização de escrita.

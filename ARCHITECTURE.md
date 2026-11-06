@@ -261,3 +261,13 @@ uses EventActions.dayPreview/dayRows for one civil day from the existing ScanRep
 hover never navigates or writes. Selecting a day exposes canonical item actions;
 creation reuses existing forms with the selected day as context. Notices are
 separate inline banners. The generic layout JSON contract is unchanged.
+
+
+### Início da Execução 2 — planejamento sem IO
+
+application/transfer_plan.py é um planejador puro sobre ScanReports. A saída
+DocumentCandidate é transitória, com seleção explícita separada de descoberta.
+Ele não abre cofres, não atualiza SQLite e não autoriza copiar. A futura operação
+precisa revalidar snapshots e aplicar os locks e escritores existentes. Próximo
+incremento: completar o preflight de arquivos/identidades/assets/layouts e depois
+integrar seleção/confirmacão ao worker e à interface modular.
